@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestao de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <div class="mb-4 flex items-center justify-between">
+        <p class="text-sm text-slate-500">{{ objects|length }} registro(s) encontrado(s).</p>
+        <a href="{% url create_url_name %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Novo registro</a>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+        {% for object in objects %}
+            <article class="rounded-2xl bg-white p-5 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold">{{ object.name }}</h3>
+                        <p class="mt-2 text-sm text-slate-500">Filiais vinculadas</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            {% for branch in object.branches.all %}
+                                <span class="rounded-full bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                                    {{ branch.code }} - {{ branch.name }}
+                                </span>
+                            {% empty %}
+                                <span class="text-sm text-slate-500">Nenhuma filial vinculada.</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{% url update_url_name object.pk %}" class="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">Editar</a>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <article class="rounded-2xl bg-white p-8 text-center shadow-sm">
+                <p class="text-slate-500">Nenhum registro cadastrado ate o momento.</p>
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}

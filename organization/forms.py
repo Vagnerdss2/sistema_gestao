@@ -14,8 +14,8 @@ class DepartmentForm(StyledModelForm):
     class Meta:
         model = Department
         fields = ["name", "branches"]
-        widgets = {
-            "branches": forms.SelectMultiple(attrs={"size": 6}),
+        help_texts = {
+            "branches": "Adicione apenas as filiais que realmente pertencem a este setor.",
         }
 
 

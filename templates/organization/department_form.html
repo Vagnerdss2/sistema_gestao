@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestao de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <form method="post" class="space-y-6 rounded-2xl bg-white p-6 shadow-sm">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+        {% if form.non_field_errors %}
+            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ form.non_field_errors|join:", " }}
+            </div>
+        {% endif %}
+
+        <div class="grid gap-6 lg:grid-cols-2">
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                    {{ form.name.label }}
+                </label>
+                <div class="mt-1">{{ form.name }}</div>
+                {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-rose-600">{{ form.name.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <div id="department-branches-manager">
+                <div class="hidden">{{ form.branches }}</div>
+                <label for="branch-picker" class="block text-sm font-medium text-slate-700">
+                    Filiais vinculadas
+                </label>
+                <p class="mt-1 text-xs text-slate-500">
+                    Adicione uma filial por vez. A lista abaixo mostra somente as filiais vinculadas a este setor.
+                </p>
+
+                <div class="mt-3 flex gap-3">
+                    <select id="branch-picker" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200">
+                        <option value="">Selecione uma filial para adicionar</option>
+                    </select>
+                    <button
+                        id="add-branch-button"
+                        type="button"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                    >
+                        Adicionar
+                    </button>
+                </div>
+
+                <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-800">Filiais adicionadas</h3>
+                        <span id="selected-branches-count" class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">0</span>
+                    </div>
+
+                    <div id="selected-branches-list" class="flex flex-wrap gap-2"></div>
+                    <p id="selected-branches-empty" class="text-sm text-slate-500">
+                        Nenhuma filial vinculada ainda.
+                    </p>
+                </div>
+
+                {% if form.branches.help_text %}
+                    <p class="mt-2 text-xs text-slate-500">{{ form.branches.help_text }}</p>
+                {% endif %}
+                {% if form.branches.errors %}
+                    <p class="mt-2 text-sm text-rose-600">{{ form.branches.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">{{ submit_label }}</button>
+            {% if cancel_url_name %}
+                <a href="{% url cancel_url_name %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium">Cancelar</a>
+            {% endif %}
+        </div>
+    </form>
+    <script>
+        (function () {
+            const originalField = document.getElementById("id_branches");
+            const picker = document.getElementById("branch-picker");
+            const addButton = document.getElementById("add-branch-button");
+            const selectedList = document.getElementById("selected-branches-list");
+            const emptyState = document.getElementById("selected-branches-empty");
+            const counter = document.getElementById("selected-branches-count");
+
+            if (!originalField || !picker || !addButton || !selectedList || !emptyState || !counter) {
+                return;
+            }
+
+            const options = Array.from(originalField.options).map((option) => ({
+                value: option.value,
+                label: option.textContent.trim(),
+            }));
+
+            const selectedValues = new Set(
+                Array.from(originalField.selectedOptions).map((option) => option.value),
+            );
+
+            function syncOriginalField() {
+                Array.from(originalField.options).forEach((option) => {
+                    option.selected = selectedValues.has(option.value);
+                });
+            }
+
+            function renderPicker() {
+                const currentValue = picker.value;
+                picker.innerHTML = '<option value="">Selecione uma filial para adicionar</option>';
+
+                options
+                    .filter((option) => !selectedValues.has(option.value))
+                    .forEach((option) => {
+                        const optionElement = document.createElement("option");
+                        optionElement.value = option.value;
+                        optionElement.textContent = option.label;
+                        picker.appendChild(optionElement);
+                    });
+
+                if (Array.from(picker.options).some((option) => option.value === currentValue)) {
+                    picker.value = currentValue;
+                }
+            }
+
+            function renderSelectedBranches() {
+                selectedList.innerHTML = "";
+
+                const selectedOptions = options.filter((option) => selectedValues.has(option.value));
+                counter.textContent = String(selectedOptions.length);
+                emptyState.classList.toggle("hidden", selectedOptions.length > 0);
+
+                selectedOptions.forEach((option) => {
+                    const item = document.createElement("div");
+                    item.className =
+                        "inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900";
+
+                    const label = document.createElement("span");
+                    label.textContent = option.label;
+
+                    const removeButton = document.createElement("button");
+                    removeButton.type = "button";
+                    removeButton.className =
+                        "rounded-full bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100";
+                    removeButton.textContent = "Remover";
+                    removeButton.addEventListener("click", () => {
+                        selectedValues.delete(option.value);
+                        syncOriginalField();
+                        renderPicker();
+                        renderSelectedBranches();
+                    });
+
+                    item.appendChild(label);
+                    item.appendChild(removeButton);
+                    selectedList.appendChild(item);
+                });
+            }
+
+            addButton.addEventListener("click", () => {
+                if (!picker.value) {
+                    return;
+                }
+
+                selectedValues.add(picker.value);
+                syncOriginalField();
+                renderPicker();
+                renderSelectedBranches();
+                picker.value = "";
+            });
+
+            syncOriginalField();
+            renderPicker();
+            renderSelectedBranches();
+        })();
+    </script>
+{% endblock %}

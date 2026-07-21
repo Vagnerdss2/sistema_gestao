@@ -41,6 +41,7 @@ class BranchUpdateView(AppUpdateView):
 class DepartmentListView(AppListView):
     model = Department
     queryset = Department.objects.prefetch_related("branches")
+    template_name = "organization/department_list.html"
     page_title = "Setores"
     page_description = "Gerencie os setores vinculados a cada filial."
     create_url_name = "organization:department-create"
@@ -50,6 +51,7 @@ class DepartmentListView(AppListView):
 class DepartmentCreateView(AppCreateView):
     model = Department
     form_class = DepartmentForm
+    template_name = "organization/department_form.html"
     page_title = "Novo Setor"
     page_description = "Cadastre um setor para atendimento."
     cancel_url_name = "organization:department-list"
@@ -59,6 +61,7 @@ class DepartmentCreateView(AppCreateView):
 class DepartmentUpdateView(AppUpdateView):
     model = Department
     form_class = DepartmentForm
+    template_name = "organization/department_form.html"
     page_title = "Editar Setor"
     page_description = "Atualize os dados do setor."
     cancel_url_name = "organization:department-list"
