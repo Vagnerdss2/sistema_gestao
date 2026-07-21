@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestao de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}Consulta detalhada do registro selecionado.{% endblock %}
+
+{% block content %}
+    <article class="rounded-2xl bg-white p-6 shadow-sm">
+        <div class="mb-6 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">{{ object }}</h3>
+            <a href="{% url list_url_name %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Voltar</a>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-sm text-slate-500">Criado em</p>
+                <p class="mt-1 font-medium">{{ object.created_at|date:"d/m/Y H:i" }}</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-sm text-slate-500">Atualizado em</p>
+                <p class="mt-1 font-medium">{{ object.updated_at|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </article>
+{% endblock %}

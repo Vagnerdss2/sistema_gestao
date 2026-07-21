@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.name }} | Inventario{% endblock %}
+{% block page_title %}Detalhes do Item{% endblock %}
+{% block page_description %}Historico patrimonial e movimentacoes do item selecionado.{% endblock %}
+
+{% block content %}
+    <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-xl font-semibold">{{ object.name }}</h3>
+                <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Editar</a>
+            </div>
+
+            <dl class="grid gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Categoria</dt><dd class="mt-1 font-medium">{{ object.category }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Filial</dt><dd class="mt-1 font-medium">{{ object.branch }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Modelo</dt><dd class="mt-1 font-medium">{{ object.model|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Marca</dt><dd class="mt-1 font-medium">{{ object.brand|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Serie</dt><dd class="mt-1 font-medium">{{ object.serial_number|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Patrimonio</dt><dd class="mt-1 font-medium">{{ object.asset_tag|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Status</dt><dd class="mt-1 font-medium">{{ object.get_status_display }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Quantidade</dt><dd class="mt-1 font-medium">{{ object.quantity }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Minimo</dt><dd class="mt-1 font-medium">{{ object.minimum_quantity }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Colaborador</dt><dd class="mt-1 font-medium">{{ object.assigned_employee|default:"-" }}</dd></div>
+            </dl>
+        </article>
+
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold">Observacoes</h3>
+            <p class="mt-3 text-sm text-slate-600">{{ object.notes|default:"Sem observacoes." }}</p>
+        </article>
+    </section>
+
+    <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Movimentacoes</h3>
+            <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Voltar</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-slate-200 text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Data</th>
+                        <th class="px-4 py-3">Tipo</th>
+                        <th class="px-4 py-3">Quantidade</th>
+                        <th class="px-4 py-3">Referencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in object.movements.all %}
+                        <tr class="border-b border-slate-100">
+                            <td class="px-4 py-3">{{ movement.created_at|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-3">{{ movement.get_movement_type_display }}</td>
+                            <td class="px-4 py-3">{{ movement.quantity }}</td>
+                            <td class="px-4 py-3">{{ movement.reference|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">Nenhuma movimentacao registrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

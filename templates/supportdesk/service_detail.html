@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.title }} | Servicos{% endblock %}
+{% block page_title %}Detalhes do Servico{% endblock %}
+{% block page_description %}Historico do atendimento, tecnico responsavel e itens envolvidos.{% endblock %}
+
+{% block content %}
+    <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-xl font-semibold">{{ object.title }}</h3>
+                <a href="{% url 'supportdesk:service-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Editar</a>
+            </div>
+            <dl class="grid gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Status</dt><dd class="mt-1 font-medium">{{ object.get_status_display }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Data/Hora</dt><dd class="mt-1 font-medium">{{ object.service_datetime|date:"d/m/Y H:i" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Usuario atendido</dt><dd class="mt-1 font-medium">{{ object.attended_user }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Tecnico</dt><dd class="mt-1 font-medium">{{ object.technician }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Setor</dt><dd class="mt-1 font-medium">{{ object.department }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Filial</dt><dd class="mt-1 font-medium">{{ object.branch }}</dd></div>
+            </dl>
+
+            <div class="mt-6 rounded-xl border border-slate-200 p-4">
+                <p class="text-sm text-slate-500">Descricao curta</p>
+                <p class="mt-1 font-medium">{{ object.short_description }}</p>
+            </div>
+            <div class="mt-4 rounded-xl border border-slate-200 p-4">
+                <p class="text-sm text-slate-500">Solucao aplicada</p>
+                <p class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ object.solution_description }}</p>
+            </div>
+        </article>
+
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold">Itens envolvidos</h3>
+                <a href="{% url 'supportdesk:service-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Voltar</a>
+            </div>
+            <div class="space-y-3">
+                {% for usage in object.item_usages.all %}
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <p class="font-medium">{{ usage.item }}</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ usage.get_usage_type_display }} | Quantidade: {{ usage.quantity }}</p>
+                    </div>
+                {% empty %}
+                    <p class="text-sm text-slate-500">Nenhum item vinculado ao atendimento.</p>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+{% endblock %}

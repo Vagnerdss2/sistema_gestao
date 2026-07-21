@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestao de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <form method="post" enctype="multipart/form-data" class="space-y-6 rounded-2xl bg-white p-6 shadow-sm">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+        {% if form.non_field_errors %}
+            <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ form.non_field_errors|join:", " }}
+            </div>
+        {% endif %}
+
+        <div class="grid gap-5 md:grid-cols-2">
+            {% for field in form.visible_fields %}
+                <div class="{% if field.field.widget.input_type == 'textarea' %}md:col-span-2{% endif %}">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                        {{ field.label }}
+                    </label>
+                    <div class="mt-1">{{ field }}</div>
+                    {% if field.help_text %}
+                        <p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <p class="mt-1 text-sm text-rose-600">{{ field.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if formset %}
+            <div class="rounded-2xl border border-slate-200 p-5">
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold">Itens relacionados</h3>
+                    <p class="text-sm text-slate-500">Preencha as linhas necessarias e remova as que nao deseja salvar.</p>
+                </div>
+
+                {{ formset.management_form }}
+                <div class="space-y-4">
+                    {% for nested_form in formset %}
+                        <div class="grid gap-4 rounded-xl border border-slate-200 p-4 md:grid-cols-4">
+                            {% for hidden in nested_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            {% for field in nested_form.visible_fields %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                                        {{ field.label }}
+                                    </label>
+                                    <div class="mt-1">{{ field }}</div>
+                                    {% if field.errors %}
+                                        <p class="mt-1 text-sm text-rose-600">{{ field.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="flex gap-3">
+            <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">{{ submit_label }}</button>
+            {% if cancel_url_name %}
+                <a href="{% url cancel_url_name %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium">Cancelar</a>
+            {% endif %}
+        </div>
+    </form>
+{% endblock %}

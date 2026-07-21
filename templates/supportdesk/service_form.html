@@ -1,0 +1,31 @@
+{% extends "shared/object_form.html" %}
+
+{% block content %}
+    {{ block.super }}
+    <script>
+        const attendedUserField = document.getElementById("id_attended_user");
+        const departmentField = document.getElementById("id_department");
+        const branchField = document.getElementById("id_branch");
+
+        async function syncEmployeeMetadata() {
+            if (!attendedUserField || !attendedUserField.value) {
+                return;
+            }
+
+            const response = await fetch(`/organizacao/colaboradores/${attendedUserField.value}/metadata/`);
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            if (departmentField) {
+                departmentField.value = payload.department_id;
+            }
+            if (branchField) {
+                branchField.value = payload.branch_id;
+            }
+        }
+
+        attendedUserField?.addEventListener("change", syncEmployeeMetadata);
+    </script>
+{% endblock %}

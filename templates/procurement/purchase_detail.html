@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.title }} | Compras{% endblock %}
+{% block page_title %}Detalhes da Compra{% endblock %}
+{% block page_description %}Acompanhe status, itens adquiridos e integracao com estoque.{% endblock %}
+
+{% block content %}
+    <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-xl font-semibold">{{ object.title }}</h3>
+                <a href="{% url 'procurement:purchase-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Editar</a>
+            </div>
+            <dl class="grid gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Status</dt><dd class="mt-1 font-medium">{{ object.get_status_display }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Data da compra</dt><dd class="mt-1 font-medium">{{ object.purchase_date|date:"d/m/Y" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Filial</dt><dd class="mt-1 font-medium">{{ object.branch }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Fornecedor</dt><dd class="mt-1 font-medium">{{ object.supplier }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Solicitante</dt><dd class="mt-1 font-medium">{{ object.requester|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Integracao em estoque</dt><dd class="mt-1 font-medium">{% if object.inventory_processed %}Processada{% else %}Pendente{% endif %}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Valor estimado</dt><dd class="mt-1 font-medium">R$ {{ object.estimated_total }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Valor real</dt><dd class="mt-1 font-medium">R$ {{ object.actual_total }}</dd></div>
+            </dl>
+        </article>
+
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold">Nota Fiscal</h3>
+            <div class="mt-4 space-y-3 text-sm">
+                <p><span class="font-medium">Link:</span> {% if object.invoice_link %}<a class="text-sky-700" href="{{ object.invoice_link }}">{{ object.invoice_link }}</a>{% else %}-{% endif %}</p>
+                <p><span class="font-medium">Arquivo:</span> {% if object.invoice_file %}<a class="text-sky-700" href="{{ object.invoice_file.url }}">{{ object.invoice_file.name }}</a>{% else %}-{% endif %}</p>
+                <p><span class="font-medium">Observacoes:</span> {{ object.notes|default:"-" }}</p>
+            </div>
+        </article>
+    </section>
+
+    <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Itens da Compra</h3>
+            <a href="{% url 'procurement:purchase-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Voltar</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-slate-200 text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Item</th>
+                        <th class="px-4 py-3">Categoria</th>
+                        <th class="px-4 py-3">Quantidade</th>
+                        <th class="px-4 py-3">Unitario Real</th>
+                        <th class="px-4 py-3">Vinculo Estoque</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in object.items.all %}
+                        <tr class="border-b border-slate-100">
+                            <td class="px-4 py-3">{{ item.item_name }}</td>
+                            <td class="px-4 py-3">{{ item.category }}</td>
+                            <td class="px-4 py-3">{{ item.quantity }}</td>
+                            <td class="px-4 py-3">R$ {{ item.actual_unit_price }}</td>
+                            <td class="px-4 py-3">{{ item.inventory_item|default:"Pendente" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Nenhum item adicionado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

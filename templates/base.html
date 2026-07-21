@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Sistema de Gestao de TI{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <div class="flex min-h-screen">
+        <aside class="hidden w-72 bg-slate-900 p-6 text-slate-100 lg:block">
+            <div class="mb-8">
+                <p class="text-xs uppercase tracking-[0.3em] text-sky-300">Operacao de TI</p>
+                <h1 class="mt-2 text-2xl font-semibold">Gestao Interna</h1>
+                <p class="mt-2 text-sm text-slate-400">Compras, inventario, servicos e tarefas.</p>
+            </div>
+
+            <nav class="space-y-2">
+                {% for item in navigation_items %}
+                    <a href="{% url item.url_name %}" class="block rounded-lg px-3 py-2 text-sm transition hover:bg-slate-800">
+                        {{ item.label }}
+                    </a>
+                {% endfor %}
+            </nav>
+        </aside>
+
+        <div class="flex-1">
+            <header class="border-b border-slate-200 bg-white px-6 py-4">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold">{% block page_title %}Painel{% endblock %}</h2>
+                        <p class="text-sm text-slate-500">{% block page_description %}{% endblock %}</p>
+                    </div>
+
+                    {% if user.is_authenticated %}
+                        <div class="flex items-center gap-3 text-sm">
+                            <span class="rounded-full bg-slate-100 px-3 py-2">{{ user.username }}</span>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-white">Sair</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </header>
+
+            <main class="px-6 py-6">
+                {% if messages %}
+                    <div class="mb-4 space-y-2">
+                        {% for message in messages %}
+                            <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>
