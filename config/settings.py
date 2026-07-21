@@ -13,10 +13,11 @@ SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
     "dev-only-secret-key-change-before-production",
 )
-DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "false"
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in ("true", "1", "t")
+
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("vagnerdss.pythonanywhere.com", "localhost,127.0.0.1,testserver").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "vagnerdss.pythonanywhere.com,localhost,127.0.0.1,testserver").split(",")
     if host.strip()
 ]
 
