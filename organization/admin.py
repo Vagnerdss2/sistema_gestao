@@ -11,9 +11,14 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ("name", "branch")
-    list_filter = ("branch",)
+    list_display = ("name", "branch_list")
+    list_filter = ("branches",)
     search_fields = ("name",)
+    filter_horizontal = ("branches",)
+
+    @admin.display(description="filiais")
+    def branch_list(self, obj):
+        return obj.branches_display
 
 
 @admin.register(Employee)

@@ -22,24 +22,29 @@ class Branch(TimeStampedModel):
 
 
 class Department(TimeStampedModel):
-    """Setor vinculado a uma filial."""
+    """Setor que pode ser compartilhado entre varias filiais."""
 
     name = models.CharField("nome", max_length=120)
-    branch = models.ForeignKey(
+    branches = models.ManyToManyField(
         Branch,
-        on_delete=models.PROTECT,
         related_name="departments",
-        verbose_name="filial",
+        verbose_name="filiais",
     )
 
     class Meta:
         ordering = ("name",)
-        unique_together = ("name", "branch")
+        constraints = [
+            models.UniqueConstraint(fields=("name",), name="unique_department_name")
+        ]
         verbose_name = "setor"
         verbose_name_plural = "setores"
 
+    @property
+    def branches_display(self) -> str:
+        return ", ".join(self.branches.order_by("code").values_list("code", flat=True))
+
     def __str__(self) -> str:
-        return f"{self.name} ({self.branch.code})"
+        return self.name
 
 
 class Employee(TimeStampedModel):
@@ -68,14 +73,16 @@ class Employee(TimeStampedModel):
         verbose_name_plural = "colaboradores"
 
     def clean(self) -> None:
-        if self.department_id and self.branch_id and self.department.branch_id != self.branch_id:
+        if (
+            self.department_id
+            and self.branch_id
+            and not self.department.branches.filter(pk=self.branch_id).exists()
+        ):
             raise ValidationError(
-                {"branch": "A filial precisa corresponder a filial do setor selecionado."}
+                {"branch": "A filial precisa estar entre as filiais permitidas para o setor selecionado."}
             )
 
     def save(self, *args, **kwargs):
-        if self.department_id:
-            self.branch = self.department.branch
         self.full_clean()
         return super().save(*args, **kwargs)
 

@@ -40,7 +40,7 @@ class BranchUpdateView(AppUpdateView):
 
 class DepartmentListView(AppListView):
     model = Department
-    queryset = Department.objects.select_related("branch")
+    queryset = Department.objects.prefetch_related("branches")
     page_title = "Setores"
     page_description = "Gerencie os setores vinculados a cada filial."
     create_url_name = "organization:department-create"

@@ -12,7 +12,8 @@ from procurement.services import refresh_purchase_totals, sync_purchase_order_to
 class ProcurementServiceTests(TestCase):
     def setUp(self):
         self.branch = Branch.objects.create(name="Matriz", code="MTZ", city="Sao Paulo", state="SP")
-        self.department = Department.objects.create(name="TI", branch=self.branch)
+        self.department = Department.objects.create(name="TI")
+        self.department.branches.set([self.branch])
         self.employee = Employee.objects.create(
             full_name="Carlos Lima",
             email="carlos@example.com",

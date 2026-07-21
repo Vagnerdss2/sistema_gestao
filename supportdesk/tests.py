@@ -12,7 +12,8 @@ from supportdesk.services import process_service_item_usages
 class ServiceOrderTests(TestCase):
     def setUp(self):
         self.branch = Branch.objects.create(name="Matriz", code="MTZ", city="Sao Paulo", state="SP")
-        self.department = Department.objects.create(name="TI", branch=self.branch)
+        self.department = Department.objects.create(name="TI")
+        self.department.branches.set([self.branch])
         self.employee = Employee.objects.create(
             full_name="Paula Nunes",
             email="paula@example.com",

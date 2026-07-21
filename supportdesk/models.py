@@ -62,14 +62,21 @@ class ServiceOrder(TimeStampedModel):
         if self.attended_user_id and self.department_id:
             if self.attended_user.department_id != self.department_id:
                 raise ValidationError({"department": "O setor deve corresponder ao usuario atendido."})
-        if self.department_id and self.branch_id and self.department.branch_id != self.branch_id:
-            raise ValidationError({"branch": "A filial deve corresponder ao setor informado."})
+        if self.attended_user_id and self.branch_id:
+            if self.attended_user.branch_id != self.branch_id:
+                raise ValidationError({"branch": "A filial deve corresponder ao usuario atendido."})
+        if (
+            self.department_id
+            and self.branch_id
+            and not self.department.branches.filter(pk=self.branch_id).exists()
+        ):
+            raise ValidationError({"branch": "A filial precisa estar habilitada para o setor informado."})
 
     def save(self, *args, **kwargs):
         if self.attended_user_id and not self.department_id:
             self.department = self.attended_user.department
-        if self.department_id and not self.branch_id:
-            self.branch = self.department.branch
+        if self.attended_user_id and not self.branch_id:
+            self.branch = self.attended_user.branch
         self.full_clean()
         return super().save(*args, **kwargs)
 

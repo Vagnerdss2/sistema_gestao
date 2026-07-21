@@ -13,17 +13,16 @@ class BranchForm(StyledModelForm):
 class DepartmentForm(StyledModelForm):
     class Meta:
         model = Department
-        fields = ["name", "branch"]
+        fields = ["name", "branches"]
+        widgets = {
+            "branches": forms.SelectMultiple(attrs={"size": 6}),
+        }
 
 
 class EmployeeForm(StyledModelForm):
     class Meta:
         model = Employee
         fields = ["full_name", "email", "job_title", "department", "branch", "is_active"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["branch"].disabled = True
 
 
 class SupplierForm(StyledModelForm):
