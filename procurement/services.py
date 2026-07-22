@@ -45,14 +45,25 @@ def sync_purchase_order_to_inventory(purchase_order: PurchaseOrder) -> None:
 
 
 def refresh_purchase_totals(purchase_order: PurchaseOrder) -> None:
-    """Recalcula os totais estimado e real da compra com base nos itens."""
+    """Recalcula os totais estimado e real da compra com base nos itens se houver subtotais informados."""
 
-    estimated_total = Decimal("0.00")
-    actual_total = Decimal("0.00")
-    for item in purchase_order.items.all():
-        estimated_total += item.estimated_subtotal
-        actual_total += item.actual_subtotal
+    items = list(purchase_order.items.all())
+    if not items:
+        return
 
-    purchase_order.estimated_total = estimated_total
-    purchase_order.actual_total = actual_total
-    purchase_order.save(update_fields=["estimated_total", "actual_total", "updated_at"])
+    items_estimated_total = sum((item.estimated_subtotal for item in items), Decimal("0.00"))
+    items_actual_total = sum((item.actual_subtotal for item in items), Decimal("0.00"))
+
+    fields_to_update = []
+    if items_estimated_total > Decimal("0.00"):
+        purchase_order.estimated_total = items_estimated_total
+        fields_to_update.append("estimated_total")
+
+    if items_actual_total > Decimal("0.00"):
+        purchase_order.actual_total = items_actual_total
+        fields_to_update.append("actual_total")
+
+    if fields_to_update:
+        fields_to_update.append("updated_at")
+        purchase_order.save(update_fields=fields_to_update)
+

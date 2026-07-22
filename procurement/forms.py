@@ -22,7 +22,7 @@ class PurchaseOrderForm(StyledModelForm):
             "notes",
         ]
         widgets = {
-            "purchase_date": forms.DateInput(attrs={"type": "date"}),
+            "purchase_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
 

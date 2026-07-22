@@ -21,5 +21,5 @@ class KanbanTaskForm(StyledModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            "due_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         }
