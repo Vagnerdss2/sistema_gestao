@@ -82,10 +82,14 @@ class Employee(TimeStampedModel):
     def clean(self) -> None:
         if self.email == "":
             self.email = None
-        if self.email and Employee.objects.exclude(pk=self.pk).filter(email=self.email).exists():
-            raise ValidationError(
-                {"email": "Já existe um colaborador cadastrado com este e-mail."}
-            )
+        if self.email:
+            qs = Employee.objects.filter(email=self.email)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    {"email": "Já existe um colaborador cadastrado com este e-mail."}
+                )
         if (
             self.department_id
             and self.branch_id
@@ -98,7 +102,6 @@ class Employee(TimeStampedModel):
     def save(self, *args, **kwargs):
         if self.email == "":
             self.email = None
-        self.full_clean()
         return super().save(*args, **kwargs)
 
     def __str__(self) -> str:

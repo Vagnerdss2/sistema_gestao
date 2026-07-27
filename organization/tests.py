@@ -43,3 +43,30 @@ class EmployeeModelTests(TestCase):
         self.assertIsNone(emp1.email)
         self.assertIsNone(emp2.email)
         self.assertEqual(Employee.objects.count(), 2)
+
+    def test_create_employee_via_view_without_email(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+
+        User = get_user_model()
+        user = User.objects.create_user(username="admin", password="password")
+        self.client.force_login(user)
+
+        branch = Branch.objects.create(name="Sao Paulo", code="SP", city="Sao Paulo", state="SP")
+        department = Department.objects.create(name="TI")
+        department.branches.set([branch])
+
+        url = reverse("organization:employee-create")
+        data = {
+            "full_name": "João Sem Email",
+            "email": "",
+            "job_title": "Assistente",
+            "department": department.pk,
+            "branch": branch.pk,
+            "is_active": True,
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Employee.objects.filter(full_name="João Sem Email").exists())
+        emp = Employee.objects.get(full_name="João Sem Email")
+        self.assertIsNone(emp.email)

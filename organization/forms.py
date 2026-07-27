@@ -27,6 +27,16 @@ class EmployeeForm(StyledModelForm):
             "email": "Campo opcional.",
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].required = False
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if not email or not str(email).strip():
+            return None
+        return str(email).strip()
+
 
 class SupplierForm(StyledModelForm):
     class Meta:
