@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, TemplateView
-from django.views.generic.edit import CreateView, UpdateView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 from inventory.models import InventoryItem, InventoryStatus
 from kanban.models import KanbanTask, TaskStatus
@@ -69,6 +69,7 @@ class AppListView(LoginRequiredMixin, ListView):
     create_url_name = ""
     update_url_name = ""
     detail_url_name = ""
+    delete_url_name = ""
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -79,6 +80,7 @@ class AppListView(LoginRequiredMixin, ListView):
                 "create_url_name": self.create_url_name,
                 "update_url_name": self.update_url_name,
                 "detail_url_name": self.detail_url_name,
+                "delete_url_name": self.delete_url_name,
             }
         )
         return context
@@ -113,6 +115,28 @@ class AppUpdateView(LoginRequiredMixin, UpdateView):
     page_title = ""
     page_description = ""
     submit_label = "Atualizar"
+    cancel_url_name = ""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "page_title": self.page_title,
+                "page_description": self.page_description,
+                "submit_label": self.submit_label,
+                "cancel_url_name": self.cancel_url_name,
+            }
+        )
+        return context
+
+
+class AppDeleteView(LoginRequiredMixin, DeleteView):
+    """Tela padrao para confirmacao de exclusao."""
+
+    template_name = "shared/object_confirm_delete.html"
+    page_title = "Excluir Registro"
+    page_description = "Confirme se realmente deseja excluir este registro."
+    submit_label = "Confirmar Exclusão"
     cancel_url_name = ""
 
     def get_context_data(self, **kwargs):

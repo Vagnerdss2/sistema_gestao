@@ -142,3 +142,12 @@ class InventoryFeatureTests(TestCase):
         self.assertIn(self.item, res2.context["objects"])
         self.assertNotIn(item2, res2.context["objects"])
 
+    def test_delete_inventory_item(self):
+        url = reverse("inventory:item-delete", kwargs={"pk": self.item.pk})
+        get_res = self.client.get(url)
+        self.assertEqual(get_res.status_code, 200)
+
+        post_res = self.client.post(url)
+        self.assertEqual(post_res.status_code, 302)
+        self.assertFalse(InventoryItem.objects.filter(pk=self.item.pk).exists())
+

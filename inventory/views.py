@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 
-from core.views import AppCreateView, AppDetailView, AppFormPageView, AppListView, AppUpdateView
+from core.views import AppCreateView, AppDeleteView, AppDetailView, AppFormPageView, AppListView, AppUpdateView
 from inventory.forms import AddStockForm, AssignEmployeeForm, InventoryItemForm
 from inventory.models import InventoryItem, MovementType, StockMovement
 from organization.models import Employee
@@ -84,6 +84,20 @@ class InventoryItemUpdateView(AppUpdateView):
     page_description = "Atualize dados de estoque, vinculacao e status."
     cancel_url_name = "inventory:item-list"
     success_url = reverse_lazy("inventory:item-list")
+
+
+class InventoryItemDeleteView(AppDeleteView):
+    model = InventoryItem
+    page_title = "Excluir Item de Estoque"
+    page_description = "Tem certeza que deseja remover este item de estoque do sistema?"
+    cancel_url_name = "inventory:item-list"
+    success_url = reverse_lazy("inventory:item-list")
+
+    def form_valid(self, form):
+        item_name = str(self.object)
+        response = super().form_valid(form)
+        messages.success(self.request, f"Item '{item_name}' excluído com sucesso!")
+        return response
 
 
 class InventoryItemDetailView(AppDetailView):

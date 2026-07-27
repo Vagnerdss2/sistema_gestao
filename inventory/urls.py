@@ -11,4 +11,5 @@ urlpatterns = [
     path("<int:pk>/editar/", views.InventoryItemUpdateView.as_view(), name="item-update"),
     path("<int:pk>/adicionar-estoque/", views.InventoryItemAddStockView.as_view(), name="item-add-stock"),
     path("<int:pk>/vincular-colaborador/", views.InventoryItemAssignView.as_view(), name="item-assign"),
+    path("<int:pk>/excluir/", views.InventoryItemDeleteView.as_view(), name="item-delete"),
 ]

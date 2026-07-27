@@ -124,6 +124,9 @@
                         {% if update_url_name %}
                             <a href="{% url update_url_name object.pk %}" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 transition">Editar</a>
                         {% endif %}
+                        {% if delete_url_name %}
+                            <a href="{% url delete_url_name object.pk %}" class="rounded-lg bg-rose-50 border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 transition">Excluir</a>
+                        {% endif %}
                     </div>
                 </div>
             </article>
