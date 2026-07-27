@@ -51,7 +51,7 @@ class Employee(TimeStampedModel):
     """Colaborador usado como solicitante, atendido e responsavel."""
 
     full_name = models.CharField("nome completo", max_length=150)
-    email = models.EmailField(unique=True)
+    email = models.EmailField("e-mail", blank=True, null=True)
     job_title = models.CharField("cargo", max_length=120)
     department = models.ForeignKey(
         Department,
@@ -71,8 +71,21 @@ class Employee(TimeStampedModel):
         ordering = ("full_name",)
         verbose_name = "colaborador"
         verbose_name_plural = "colaboradores"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("email",),
+                condition=~models.Q(email=None) & ~models.Q(email=""),
+                name="unique_non_blank_employee_email",
+            )
+        ]
 
     def clean(self) -> None:
+        if self.email == "":
+            self.email = None
+        if self.email and Employee.objects.exclude(pk=self.pk).filter(email=self.email).exists():
+            raise ValidationError(
+                {"email": "Já existe um colaborador cadastrado com este e-mail."}
+            )
         if (
             self.department_id
             and self.branch_id
@@ -83,6 +96,8 @@ class Employee(TimeStampedModel):
             )
 
     def save(self, *args, **kwargs):
+        if self.email == "":
+            self.email = None
         self.full_clean()
         return super().save(*args, **kwargs)
 

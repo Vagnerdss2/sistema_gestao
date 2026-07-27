@@ -23,6 +23,9 @@ class EmployeeForm(StyledModelForm):
     class Meta:
         model = Employee
         fields = ["full_name", "email", "job_title", "department", "branch", "is_active"]
+        help_texts = {
+            "email": "Campo opcional.",
+        }
 
 
 class SupplierForm(StyledModelForm):

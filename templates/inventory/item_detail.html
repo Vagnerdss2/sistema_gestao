@@ -7,9 +7,17 @@
 {% block content %}
     <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
         <article class="rounded-2xl bg-white p-6 shadow-sm">
-            <div class="mb-4 flex items-center justify-between">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <h3 class="text-xl font-semibold">{{ object.name }}</h3>
-                <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Editar</a>
+                <div class="flex gap-2">
+                    <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
+                        + Add Unidades
+                    </a>
+                    <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
+                        Vincular / Baixa
+                    </a>
+                    <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">Editar</a>
+                </div>
             </div>
 
             <dl class="grid gap-4 md:grid-cols-2">

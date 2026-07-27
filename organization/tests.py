@@ -19,3 +19,27 @@ class EmployeeModelTests(TestCase):
         )
 
         self.assertEqual(employee.branch, branch_es)
+
+    def test_employee_email_is_optional(self):
+        branch = Branch.objects.create(name="Sao Paulo", code="SP", city="Sao Paulo", state="SP")
+        department = Department.objects.create(name="TI")
+        department.branches.set([branch])
+
+        emp1 = Employee.objects.create(
+            full_name="Carlos Silva",
+            email="",
+            job_title="Técnico",
+            department=department,
+            branch=branch,
+        )
+        emp2 = Employee.objects.create(
+            full_name="Maria Santos",
+            email=None,
+            job_title="Analista",
+            department=department,
+            branch=branch,
+        )
+
+        self.assertIsNone(emp1.email)
+        self.assertIsNone(emp2.email)
+        self.assertEqual(Employee.objects.count(), 2)

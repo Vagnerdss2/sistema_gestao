@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestao de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <div class="mb-6 rounded-2xl bg-white p-5 shadow-sm">
+        <form method="get" class="flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[240px]">
+                <label for="search-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar Item / Código</label>
+                <input
+                    type="text"
+                    id="search-input"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Nome, modelo, marca, patrimônio ou código..."
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+            </div>
+
+            <div class="w-full sm:w-72">
+                <label for="colaborador-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Filtrar por Usuário / Colaborador</label>
+                <select
+                    id="colaborador-select"
+                    name="colaborador"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                    <option value="">Todos os colaboradores</option>
+                    {% for emp in employees %}
+                        <option value="{{ emp.pk }}" {% if selected_colaborador == emp.pk|stringformat:"s" or selected_colaborador == emp.full_name %}selected{% endif %}>
+                            {{ emp.full_name }} ({% if emp.email %}{{ emp.email }}{% else %}{{ emp.job_title }}{% endif %})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 transition">
+                    Filtrar
+                </button>
+                {% if q or selected_colaborador %}
+                    <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                        Limpar
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="mb-4 flex items-center justify-between">
+        <p class="text-sm text-slate-500">{{ objects|length }} item(ns) encontrado(s).</p>
+        {% if create_url_name %}
+            <a href="{% url create_url_name %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition">
+                + Novo Item
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+        {% for object in objects %}
+            <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-semibold text-slate-900">{{ object.name }}</h3>
+                                {% if object.is_below_minimum %}
+                                    <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="Estoque abaixo ou no limite mínimo">
+                                        Estoque Baixo
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <p class="mt-1 text-xs font-medium text-sky-600 uppercase tracking-wider">
+                                {{ object.category.name }} &bull; {{ object.branch.name }}
+                            </p>
+                        </div>
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold
+                            {% if object.status == 'in_stock' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                            {% elif object.status == 'in_use' %}bg-blue-50 text-blue-700 border border-blue-200
+                            {% elif object.status == 'in_maintenance' %}bg-amber-50 text-amber-700 border border-amber-200
+                            {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                            {{ object.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
+                        <div>
+                            <span class="text-slate-400 block">Marca / Modelo:</span>
+                            <span class="font-medium text-slate-800">{{ object.brand|default:"-" }} {{ object.model }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Série / Patrimônio:</span>
+                            <span class="font-medium text-slate-800">{{ object.serial_number|default:"-" }} / {{ object.asset_tag|default:"-" }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Quantidade em Estoque:</span>
+                            <span class="font-bold text-slate-900 text-sm">{{ object.quantity }} un.</span> (mín: {{ object.minimum_quantity }})
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Colaborador Vinculado:</span>
+                            {% if object.assigned_employee %}
+                                <span class="font-semibold text-sky-700">{{ object.assigned_employee.full_name }}</span>
+                            {% else %}
+                                <span class="text-slate-400 italic">Não vinculado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                    <div class="flex gap-2">
+                        <a href="{% url 'inventory:item-add-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition">
+                            + Add Unidades
+                        </a>
+                        <a href="{% url 'inventory:item-assign' object.pk %}" class="inline-flex items-center rounded-lg bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition">
+                            Vincular / Baixa
+                        </a>
+                    </div>
+                    <div class="flex gap-2">
+                        {% if detail_url_name %}
+                            <a href="{% url detail_url_name object.pk %}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">Detalhes</a>
+                        {% endif %}
+                        {% if update_url_name %}
+                            <a href="{% url update_url_name object.pk %}" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 transition">Editar</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <article class="col-span-full rounded-2xl bg-white p-12 text-center shadow-sm">
+                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <h3 class="mt-2 text-sm font-semibold text-slate-900">Nenhum item encontrado</h3>
+                <p class="mt-1 text-sm text-slate-500">Nenhum item de estoque corresponde aos critérios de pesquisa.</p>
+                {% if q or selected_colaborador %}
+                    <div class="mt-4">
+                        <a href="{% url 'inventory:item-list' %}" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
+                            Limpar Filtros de Pesquisa
+                        </a>
+                    </div>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}
