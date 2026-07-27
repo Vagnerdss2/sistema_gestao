@@ -65,3 +65,17 @@ class AssignEmployeeForm(StyledForm):
         required=False,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+
+
+class ReturnStockForm(StyledForm):
+    quantity = forms.IntegerField(
+        label="Quantidade a devolver",
+        min_value=1,
+        initial=1,
+        help_text="Quantidade de unidades a serem devolvidas ao estoque geral.",
+    )
+    notes = forms.CharField(
+        label="Observações / Motivo da Devolução",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )

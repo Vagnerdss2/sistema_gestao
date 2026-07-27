@@ -59,26 +59,43 @@
 
     <div class="grid gap-4 lg:grid-cols-2">
         {% for object in objects %}
-            <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+            <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200 border-l-4 flex flex-col justify-between transition hover:shadow-md
+                {% if object.status == 'in_stock' %}border-l-emerald-500
+                {% elif object.status == 'in_use' %}border-l-amber-500
+                {% elif object.status == 'discarded' %}border-l-rose-500
+                {% elif object.status == 'in_maintenance' %}border-l-orange-500
+                {% else %}border-l-slate-400{% endif %}">
                 <div>
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-lg font-semibold text-slate-900">{{ object.name }}</h3>
+                                <h3 class="text-lg font-bold
+                                    {% if object.status == 'in_stock' %}text-emerald-700
+                                    {% elif object.status == 'in_use' %}text-amber-700
+                                    {% elif object.status == 'discarded' %}text-rose-700
+                                    {% elif object.status == 'in_maintenance' %}text-orange-700
+                                    {% else %}text-slate-900{% endif %}">
+                                    {{ object.name }}
+                                </h3>
                                 {% if object.is_below_minimum %}
                                     <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="Estoque abaixo ou no limite mínimo">
                                         Estoque Baixo
                                     </span>
                                 {% endif %}
                             </div>
-                            <p class="mt-1 text-xs font-medium text-sky-600 uppercase tracking-wider">
+                            <p class="mt-1 text-xs font-semibold uppercase tracking-wider
+                                {% if object.status == 'in_stock' %}text-emerald-600
+                                {% elif object.status == 'in_use' %}text-amber-600
+                                {% elif object.status == 'discarded' %}text-rose-600
+                                {% else %}text-sky-600{% endif %}">
                                 {{ object.category.name }} &bull; {{ object.branch.name }}
                             </p>
                         </div>
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold
-                            {% if object.status == 'in_stock' %}bg-emerald-50 text-emerald-700 border border-emerald-200
-                            {% elif object.status == 'in_use' %}bg-blue-50 text-blue-700 border border-blue-200
-                            {% elif object.status == 'in_maintenance' %}bg-amber-50 text-amber-700 border border-amber-200
+                        <span class="rounded-full px-3 py-1 text-xs font-bold shadow-2xs
+                            {% if object.status == 'in_stock' %}bg-emerald-100 text-emerald-800 border border-emerald-300
+                            {% elif object.status == 'in_use' %}bg-amber-100 text-amber-800 border border-amber-300
+                            {% elif object.status == 'discarded' %}bg-rose-100 text-rose-800 border border-rose-300
+                            {% elif object.status == 'in_maintenance' %}bg-orange-100 text-orange-800 border border-orange-300
                             {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                             {{ object.get_status_display }}
                         </span>
@@ -110,12 +127,18 @@
 
                 <div class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                     <div class="flex gap-2">
-                        <a href="{% url 'inventory:item-add-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition">
-                            + Add Unidades
-                        </a>
-                        <a href="{% url 'inventory:item-assign' object.pk %}" class="inline-flex items-center rounded-lg bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition">
-                            Vincular / Baixa
-                        </a>
+                        {% if object.assigned_employee %}
+                            <a href="{% url 'inventory:item-return-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition">
+                                Devolver ao Estoque
+                            </a>
+                        {% else %}
+                            <a href="{% url 'inventory:item-add-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition">
+                                + Add Unidades
+                            </a>
+                            <a href="{% url 'inventory:item-assign' object.pk %}" class="inline-flex items-center rounded-lg bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition">
+                                Vincular / Baixa
+                            </a>
+                        {% endif %}
                     </div>
                     <div class="flex gap-2">
                         {% if detail_url_name %}

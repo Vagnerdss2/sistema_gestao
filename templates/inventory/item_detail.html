@@ -8,14 +8,27 @@
     <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
         <article class="rounded-2xl bg-white p-6 shadow-sm">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-xl font-semibold">{{ object.name }}</h3>
-                <div class="flex gap-2">
-                    <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
-                        + Add Unidades
-                    </a>
-                    <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
-                        Vincular / Baixa
-                    </a>
+                <h3 class="text-xl font-bold
+                    {% if object.status == 'in_stock' %}text-emerald-700
+                    {% elif object.status == 'in_use' %}text-amber-700
+                    {% elif object.status == 'discarded' %}text-rose-700
+                    {% elif object.status == 'in_maintenance' %}text-orange-700
+                    {% else %}text-slate-900{% endif %}">
+                    {{ object.name }}
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% if object.assigned_employee %}
+                        <a href="{% url 'inventory:item-return-stock' object.pk %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 transition">
+                            Devolver ao Estoque
+                        </a>
+                    {% else %}
+                        <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
+                            + Add Unidades
+                        </a>
+                        <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
+                            Vincular / Baixa
+                        </a>
+                    {% endif %}
                     <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">Editar</a>
                     <a href="{% url 'inventory:item-delete' object.pk %}" class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 transition">Excluir</a>
                 </div>

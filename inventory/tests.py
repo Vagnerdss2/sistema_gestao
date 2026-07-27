@@ -82,7 +82,7 @@ class InventoryFeatureTests(TestCase):
         self.assertEqual(movement.quantity, 15)
         self.assertEqual(movement.reference, "Lote #505")
 
-    def test_assign_employee_deducts_stock(self):
+    def test_assign_employee_deducts_stock_and_creates_assigned_item(self):
         url = reverse("inventory:item-assign", kwargs={"pk": self.item.pk})
         data = {
             "employee": self.employee1.pk,
@@ -93,14 +93,44 @@ class InventoryFeatureTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.item.refresh_from_db()
-        # Initial quantity was 10, subtracted 3 -> quantity becomes 7
+        # Initial pool quantity was 10, subtracted 3 -> quantity becomes 7
         self.assertEqual(self.item.quantity, 7)
-        self.assertEqual(self.item.assigned_employee, self.employee1)
 
-        movement = self.item.movements.latest("created_at")
-        self.assertEqual(movement.movement_type, MovementType.EXIT)
-        self.assertEqual(movement.quantity, 3)
-        self.assertIn("João Silva", movement.reference)
+        # Assigned item entry is created in IN_USE status for employee1
+        assigned_item = InventoryItem.objects.get(
+            name=self.item.name,
+            assigned_employee=self.employee1,
+            status=InventoryStatus.IN_USE,
+        )
+        self.assertEqual(assigned_item.quantity, 3)
+
+    def test_return_assigned_item_to_stock(self):
+        # Create an assigned item
+        assigned_item = InventoryItem.objects.create(
+            name="Mouse Ergonomico",
+            category=self.category,
+            brand="Logitech",
+            model="MX Master 3",
+            quantity=3,
+            status=InventoryStatus.IN_USE,
+            assigned_employee=self.employee1,
+            branch=self.branch,
+        )
+
+        url = reverse("inventory:item-return-stock", kwargs={"pk": assigned_item.pk})
+        data = {
+            "quantity": 2,
+            "notes": "Devolução parcial",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+
+        assigned_item.refresh_from_db()
+        self.assertEqual(assigned_item.quantity, 1)
+
+        self.item.refresh_from_db()
+        # Pool quantity was 10, returned 2 -> pool quantity becomes 12
+        self.assertEqual(self.item.quantity, 12)
 
     def test_assign_employee_excess_quantity_validation_error(self):
         url = reverse("inventory:item-assign", kwargs={"pk": self.item.pk})
@@ -114,9 +144,17 @@ class InventoryFeatureTests(TestCase):
         self.assertFormError(response.context["form"], "quantity", "Quantidade informada (50) é superior ao estoque disponível (10).")
 
     def test_search_inventory_by_user(self):
-        # Assign item to employee1
-        self.item.assigned_employee = self.employee1
-        self.item.save()
+        # Create assigned item for employee1
+        assigned_item = InventoryItem.objects.create(
+            name="Fone Bluetooth",
+            category=self.category,
+            brand="Sony",
+            model="WH-1000XM4",
+            quantity=1,
+            status=InventoryStatus.IN_USE,
+            assigned_employee=self.employee1,
+            branch=self.branch,
+        )
 
         # Create unassigned item
         item2 = InventoryItem.objects.create(
@@ -133,13 +171,13 @@ class InventoryFeatureTests(TestCase):
         # Search by employee name
         res1 = self.client.get(url, {"colaborador": self.employee1.pk})
         self.assertEqual(res1.status_code, 200)
-        self.assertIn(self.item, res1.context["objects"])
+        self.assertIn(assigned_item, res1.context["objects"])
         self.assertNotIn(item2, res1.context["objects"])
 
         # Search by general query matching employee name
         res2 = self.client.get(url, {"q": "João"})
         self.assertEqual(res2.status_code, 200)
-        self.assertIn(self.item, res2.context["objects"])
+        self.assertIn(assigned_item, res2.context["objects"])
         self.assertNotIn(item2, res2.context["objects"])
 
     def test_delete_inventory_item(self):
