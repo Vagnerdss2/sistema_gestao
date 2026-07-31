@@ -189,3 +189,19 @@ class InventoryFeatureTests(TestCase):
         self.assertEqual(post_res.status_code, 302)
         self.assertFalse(InventoryItem.objects.filter(pk=self.item.pk).exists())
 
+    def test_discard_inventory_item(self):
+        url = reverse("inventory:item-discard", kwargs={"pk": self.item.pk})
+        get_res = self.client.get(url)
+        self.assertEqual(get_res.status_code, 200)
+
+        post_res = self.client.post(url, {"reason": "Equipamento queimado por sobretensão"})
+        self.assertEqual(post_res.status_code, 302)
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.status, InventoryStatus.DISCARDED)
+        self.assertIn("Equipamento queimado por sobretensão", self.item.notes)
+        movement = self.item.movements.latest("created_at")
+        self.assertEqual(movement.reference, "Baixa por Descarte")
+        self.assertEqual(movement.notes, "Equipamento queimado por sobretensão")
+
+

@@ -79,3 +79,18 @@ class ReturnStockForm(StyledForm):
         required=False,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+
+
+class DiscardEquipmentForm(StyledForm):
+    reason = forms.CharField(
+        label="Motivo do Descarte / Laudo Técnico",
+        required=True,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "Descreva a justificativa para o descarte do equipamento (ex: Dano irreparável, Obsolescência, Queima de componente)...",
+            }
+        ),
+        help_text="Informe o motivo técnico ou operacional para descartar este equipamento.",
+    )
+

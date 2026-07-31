@@ -22,15 +22,22 @@
                             Devolver ao Estoque
                         </a>
                     {% else %}
-                        <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
-                            + Add Unidades
-                        </a>
-                        <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
-                            Vincular / Baixa
+                        {% if object.status != 'discarded' %}
+                            <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
+                                + Add Unidades
+                            </a>
+                            <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
+                                Vincular / Baixa
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    {% if object.status != 'discarded' %}
+                        <a href="{% url 'inventory:item-discard' object.pk %}" class="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 transition">
+                            Descartar
                         </a>
                     {% endif %}
                     <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">Editar</a>
-                    <a href="{% url 'inventory:item-delete' object.pk %}" class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 transition">Excluir</a>
+                    <a href="{% url 'inventory:item-delete' object.pk %}" class="rounded-lg bg-slate-200 border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 transition">Excluir</a>
                 </div>
             </div>
 

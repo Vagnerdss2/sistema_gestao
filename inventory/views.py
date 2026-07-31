@@ -7,16 +7,16 @@ from django.utils import timezone
 from django.views.generic.edit import FormView
 
 from core.views import AppCreateView, AppDeleteView, AppDetailView, AppFormPageView, AppListView, AppUpdateView
-from inventory.forms import AddStockForm, AssignEmployeeForm, InventoryItemForm, ReturnStockForm
+from inventory.forms import AddStockForm, AssignEmployeeForm, DiscardEquipmentForm, InventoryItemForm, ReturnStockForm
 from inventory.models import InventoryItem, InventoryStatus, MovementType, StockMovement
-from organization.models import Employee
+from organization.models import Branch, Employee, EquipmentCategory
 
 
 class InventoryItemListView(AppListView):
     model = InventoryItem
     template_name = "inventory/item_list.html"
-    page_title = "Inventário e Estoque"
-    page_description = "Controle de equipamentos, patrimônio, unidades em estoque e vinculação de colaboradores."
+    page_title = "Inventário e Equipamentos"
+    page_description = "Gestão completa de equipamentos em uso, filiais, colaboradores vinculados, estoque e descartes."
     create_url_name = "inventory:item-create"
     update_url_name = "inventory:item-update"
     detail_url_name = "inventory:item-detail"
@@ -25,6 +25,9 @@ class InventoryItemListView(AppListView):
     def get_queryset(self):
         qs = InventoryItem.objects.select_related("category", "branch", "assigned_employee").order_by("name")
         q = self.request.GET.get("q", "").strip()
+        status_filter = self.request.GET.get("status", "").strip()
+        branch_filter = self.request.GET.get("branch", "").strip()
+        category_filter = self.request.GET.get("category", "").strip()
         colaborador = self.request.GET.get("colaborador", "").strip()
 
         if q:
@@ -34,10 +37,20 @@ class InventoryItemListView(AppListView):
                 | Q(brand__icontains=q)
                 | Q(serial_number__icontains=q)
                 | Q(asset_tag__icontains=q)
+                | Q(notes__icontains=q)
                 | Q(category__name__icontains=q)
                 | Q(assigned_employee__full_name__icontains=q)
                 | Q(assigned_employee__email__icontains=q)
             )
+
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        if branch_filter and branch_filter.isdigit():
+            qs = qs.filter(branch_id=int(branch_filter))
+
+        if category_filter and category_filter.isdigit():
+            qs = qs.filter(category_id=int(category_filter))
 
         if colaborador:
             if colaborador.isdigit():
@@ -52,8 +65,23 @@ class InventoryItemListView(AppListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        all_items = InventoryItem.objects.all()
+
+        context["total_items"] = all_items.count()
+        context["in_use_count"] = all_items.filter(status=InventoryStatus.IN_USE).count()
+        context["in_stock_count"] = all_items.filter(status=InventoryStatus.IN_STOCK).count()
+        context["discarded_count"] = all_items.filter(status=InventoryStatus.DISCARDED).count()
+        context["maintenance_count"] = all_items.filter(status=InventoryStatus.IN_MAINTENANCE).count()
+
         context["employees"] = Employee.objects.filter(is_active=True).order_by("full_name")
+        context["branches"] = Branch.objects.order_by("name")
+        context["categories"] = EquipmentCategory.objects.order_by("name")
+        context["status_choices"] = InventoryStatus.choices
+
         context["q"] = self.request.GET.get("q", "").strip()
+        context["selected_status"] = self.request.GET.get("status", "").strip()
+        context["selected_branch"] = self.request.GET.get("branch", "").strip()
+        context["selected_category"] = self.request.GET.get("category", "").strip()
         context["selected_colaborador"] = self.request.GET.get("colaborador", "").strip()
         return context
 
@@ -322,3 +350,48 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
             f"Devolução de {quantity} unidade(s) de '{self.item.name}' ao estoque geral concluída com sucesso!",
         )
         return redirect("inventory:item-list")
+
+
+class InventoryItemDiscardView(AppFormPageView, FormView):
+    form_class = DiscardEquipmentForm
+    template_name = "shared/object_form.html"
+    cancel_url_name = "inventory:item-list"
+    submit_label = "Confirmar Descarte"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.item = get_object_or_404(InventoryItem, pk=kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = f"Descartar Equipamento: {self.item.name}"
+        context["page_description"] = f"Patrimônio/Série: {self.item.asset_tag or self.item.serial_number or 'S/N'} | Filial: {self.item.branch.name}"
+        return context
+
+    def form_valid(self, form):
+        reason = form.cleaned_data["reason"]
+
+        with transaction.atomic():
+            item = InventoryItem.objects.select_for_update().get(pk=self.item.pk)
+            item.status = InventoryStatus.DISCARDED
+            item.assigned_employee = None
+            if item.notes:
+                item.notes = (item.notes + f"\n[Descartado em {timezone.localdate().strftime('%d/%m/%Y')}]: {reason}").strip()
+            else:
+                item.notes = f"[Descartado em {timezone.localdate().strftime('%d/%m/%Y')}]: {reason}"
+            item.save(update_fields=["status", "assigned_employee", "notes", "updated_at"])
+
+            StockMovement.objects.create(
+                item=item,
+                movement_type=MovementType.EXIT,
+                quantity=item.quantity or 1,
+                reference="Baixa por Descarte",
+                notes=reason,
+            )
+
+        messages.success(
+            self.request,
+            f"O equipamento '{item.name}' foi marcado como Descartado com sucesso.",
+        )
+        return redirect("inventory:item-list")
+

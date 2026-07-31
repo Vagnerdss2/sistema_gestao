@@ -13,4 +13,6 @@ urlpatterns = [
     path("<int:pk>/vincular-colaborador/", views.InventoryItemAssignView.as_view(), name="item-assign"),
     path("<int:pk>/excluir/", views.InventoryItemDeleteView.as_view(), name="item-delete"),
     path("<int:pk>/devolver-estoque/", views.InventoryItemReturnStockView.as_view(), name="item-return-stock"),
+    path("<int:pk>/descartar/", views.InventoryItemDiscardView.as_view(), name="item-discard"),
 ]
+
