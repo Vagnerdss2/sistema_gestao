@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}{{ page_title }} | Gestão de TI{% endblock %}
 {% block page_title %}{{ page_title }}{% endblock %}
@@ -6,45 +7,55 @@
 
 {% block content %}
     <!-- Summary Metrics -->
-    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Geral</span>
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-sky-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-sky-700">Itens Cadastrados</span>
             <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-slate-900">{{ total_items }}</span>
-                <span class="text-xs font-medium text-slate-500">itens</span>
-            </div>
-        </div>
-
-        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-amber-500">
-            <span class="text-xs font-semibold uppercase tracking-wider text-amber-700">Em Uso</span>
-            <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-amber-600">{{ in_use_count }}</span>
-                <span class="text-xs font-medium text-amber-600/80">alocados</span>
+                <span class="text-2xl font-black text-slate-900">{{ total_registered_items }}</span>
+                <span class="text-xs font-medium text-slate-500">produtos</span>
             </div>
         </div>
 
         <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-emerald-500">
-            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Em Estoque</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Unidades Físicas</span>
             <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-emerald-600">{{ in_stock_count }}</span>
+                <span class="text-2xl font-black text-emerald-600">{{ total_physical_units }}</span>
                 <span class="text-xs font-medium text-emerald-600/80">disponíveis</span>
             </div>
         </div>
 
-        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-orange-500">
-            <span class="text-xs font-semibold uppercase tracking-wider text-orange-700">Em Manutenção</span>
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-indigo-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-indigo-700">Valor em Estoque</span>
             <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-orange-600">{{ maintenance_count }}</span>
-                <span class="text-xs font-medium text-orange-600/80">manutenção</span>
+                <span class="text-2xl font-black text-indigo-900">{{ total_stock_value|currency }}</span>
+                <span class="text-xs font-medium text-indigo-600/80">total</span>
             </div>
         </div>
 
         <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-rose-500">
-            <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Descartados</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Estoque Baixo</span>
             <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-rose-600">{{ discarded_count }}</span>
-                <span class="text-xs font-medium text-rose-600/80">baixas</span>
+                <span class="text-2xl font-black text-rose-600">{{ low_stock_count }}</span>
+                <span class="text-xs font-medium text-rose-600/80">críticos</span>
             </div>
+        </div>
+    </div>
+
+    <!-- Action Header -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-bold text-slate-900">Itens Cadastrados em Estoque</h2>
+            <p class="text-xs text-slate-500">Adicione novas entradas aos itens já existentes ou cadastre um novo item.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventory:quick-stock-entry' %}" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                + Entrada de Estoque
+            </a>
+            <a href="{% url 'inventory:item-create' %}" class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                + Cadastrar Novo Item
+            </a>
         </div>
     </div>
 
@@ -52,27 +63,27 @@
     <div class="mb-6 rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
         <form method="get" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
             <div class="lg:col-span-2">
-                <label for="search-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar Equipamento / Código / Descrição</label>
+                <label for="search-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar Item / Marca / Modelo / Patrimônio</label>
                 <input
                     type="text"
                     id="search-input"
                     name="q"
                     value="{{ q }}"
-                    placeholder="Nome, marca, modelo, série, patrimônio ou descrição..."
+                    placeholder="Nome, marca, modelo, série ou patrimônio..."
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 />
             </div>
 
             <div>
-                <label for="status-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+                <label for="category-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Categoria</label>
                 <select
-                    id="status-select"
-                    name="status"
+                    id="category-select"
+                    name="category"
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
-                    <option value="">Todos os status</option>
-                    {% for code, label in status_choices %}
-                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                    <option value="">Todas as categorias</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -92,172 +103,180 @@
             </div>
 
             <div>
-                <label for="colaborador-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Colaborador / Usuário</label>
+                <label for="status-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Status</label>
                 <select
-                    id="colaborador-select"
-                    name="colaborador"
+                    id="status-select"
+                    name="status"
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
-                    <option value="">Todos os colaboradores</option>
-                    {% for emp in employees %}
-                        <option value="{{ emp.pk }}" {% if selected_colaborador == emp.pk|stringformat:"s" or selected_colaborador == emp.full_name %}selected{% endif %}>
-                            {{ emp.full_name }}
-                        </option>
+                    <option value="">Em Estoque / Operacional</option>
+                    {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <div class="sm:col-span-2 lg:col-span-5 flex items-center justify-between pt-2 border-t border-slate-100">
-                <div class="flex items-center gap-2">
+            <div class="sm:col-span-2 lg:col-span-5 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div class="flex items-center gap-3">
                     <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 transition">
                         Aplicar Filtros
                     </button>
-                    {% if q or selected_status or selected_branch or selected_category or selected_colaborador %}
+                    <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input type="checkbox" name="low_stock" value="1" {% if selected_low_stock == '1' %}checked{% endif %} onchange="this.form.submit()" class="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">
+                        <span class="text-rose-700 font-semibold">Apenas Estoque Baixo</span>
+                    </label>
+                    {% if q or selected_status or selected_branch or selected_category or selected_low_stock %}
                         <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
                             Limpar Filtros
                         </a>
                     {% endif %}
                 </div>
-                <span class="text-xs font-medium text-slate-500">{{ objects|length }} equipamento(s) listado(s)</span>
+                <span class="text-xs font-medium text-slate-500">{{ objects|length }} item(ns) encontrado(s)</span>
             </div>
         </form>
     </div>
 
-    <!-- Action Header -->
-    <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-bold text-slate-900">Lista de Equipamentos e Ativos</h2>
-        {% if create_url_name %}
-            <a href="{% url create_url_name %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition shadow-sm">
-                + Cadastrar Novo Equipamento
-            </a>
-        {% endif %}
-    </div>
+    <!-- Items Table (List View) -->
+    <div class="rounded-2xl bg-white shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <tr>
+                        <th class="px-5 py-3.5">Item / Equipamento</th>
+                        <th class="px-4 py-3.5">Série / Patrimônio</th>
+                        <th class="px-4 py-3.5">Data Aquisição</th>
+                        <th class="px-4 py-3.5 text-right">Valor Unitário</th>
+                        <th class="px-4 py-3.5 text-center">Qtd. Estoque</th>
+                        <th class="px-4 py-3.5 text-right">Valor Total</th>
+                        <th class="px-4 py-3.5">Filial</th>
+                        <th class="px-4 py-3.5 text-center">Status</th>
+                        <th class="px-5 py-3.5 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for object in objects %}
+                        <tr class="hover:bg-slate-50/80 transition {% if object.is_below_minimum %}bg-amber-50/30{% endif %}">
+                            <td class="px-5 py-4">
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'inventory:item-detail' object.pk %}" class="font-bold text-slate-900 hover:text-sky-600 transition">
+                                            {{ object.name }}
+                                        </a>
+                                        {% if object.is_below_minimum %}
+                                            <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20" title="Estoque abaixo ou no limite mínimo">
+                                                Baixo
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                        <span class="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{{ object.category.name }}</span>
+                                        {% if object.brand or object.model %}
+                                            <span>{{ object.brand }} {{ object.model }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
 
-    <!-- Items Grid -->
-    <div class="grid gap-4 lg:grid-cols-2">
-        {% for object in objects %}
-            <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200 border-l-4 flex flex-col justify-between transition hover:shadow-md
-                {% if object.status == 'in_stock' %}border-l-emerald-500
-                {% elif object.status == 'in_use' %}border-l-amber-500
-                {% elif object.status == 'discarded' %}border-l-rose-500
-                {% elif object.status == 'in_maintenance' %}border-l-orange-500
-                {% else %}border-l-slate-400{% endif %}">
-                <div>
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-lg font-bold
-                                    {% if object.status == 'in_stock' %}text-emerald-700
-                                    {% elif object.status == 'in_use' %}text-amber-700
-                                    {% elif object.status == 'discarded' %}text-rose-700
-                                    {% elif object.status == 'in_maintenance' %}text-orange-700
-                                    {% else %}text-slate-900{% endif %}">
-                                    {{ object.name }}
-                                </h3>
-                                {% if object.is_below_minimum %}
-                                    <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="Estoque abaixo ou no limite mínimo">
-                                        Estoque Baixo
-                                    </span>
+                            <td class="px-4 py-4 text-xs text-slate-600 whitespace-nowrap">
+                                {% if object.serial_number or object.asset_tag %}
+                                    <div class="font-mono text-slate-800 font-medium">
+                                        {% if object.serial_number %}S/N: {{ object.serial_number }}<br>{% endif %}
+                                        {% if object.asset_tag %}Patr: {{ object.asset_tag }}{% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-slate-400 italic">Item em lote</span>
                                 {% endif %}
-                            </div>
-                            <p class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                <span class="text-sky-700">{{ object.category.name }}</span> &bull; <span class="text-slate-700">Filial: {{ object.branch.name }}</span>
-                            </p>
-                        </div>
-                        <span class="rounded-full px-3 py-1 text-xs font-bold shadow-2xs whitespace-nowrap
-                            {% if object.status == 'in_stock' %}bg-emerald-100 text-emerald-800 border border-emerald-300
-                            {% elif object.status == 'in_use' %}bg-amber-100 text-amber-800 border border-amber-300
-                            {% elif object.status == 'discarded' %}bg-rose-100 text-rose-800 border border-rose-300
-                            {% elif object.status == 'in_maintenance' %}bg-orange-100 text-orange-800 border border-orange-300
-                            {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
-                            {{ object.get_status_display }}
-                        </span>
-                    </div>
+                            </td>
 
-                    <div class="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
-                        <div>
-                            <span class="text-slate-400 block">Marca / Modelo:</span>
-                            <span class="font-medium text-slate-800">{{ object.brand|default:"-" }} {{ object.model }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Série / Patrimônio:</span>
-                            <span class="font-medium text-slate-800">{{ object.serial_number|default:"-" }} / {{ object.asset_tag|default:"-" }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Quantidade em Estoque:</span>
-                            <span class="font-bold text-slate-900 text-sm">{{ object.quantity }} un.</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Quem está utilizando:</span>
-                            {% if object.assigned_employee %}
-                                <span class="font-semibold text-amber-700">{{ object.assigned_employee.full_name }}</span>
-                            {% else %}
-                                <span class="text-slate-400 italic">Disponível em estoque</span>
-                            {% endif %}
-                        </div>
-                    </div>
+                            <td class="px-4 py-4 text-xs text-slate-600 whitespace-nowrap">
+                                {% if object.acquisition_date %}
+                                    <span class="font-medium text-slate-800">{{ object.acquisition_date|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="text-slate-400 italic">Não informada</span>
+                                {% endif %}
+                            </td>
 
-                    {% if object.notes %}
-                        <div class="mt-3 text-xs text-slate-600 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/60">
-                            <span class="font-semibold text-slate-700">Descrição / Observação:</span>
-                            <p class="mt-0.5 line-clamp-2 text-slate-600">{{ object.notes }}</p>
-                        </div>
-                    {% endif %}
-                </div>
+                            <td class="px-4 py-4 text-xs font-semibold text-slate-800 text-right whitespace-nowrap">
+                                {{ object.unit_price|currency }}
+                            </td>
 
-                <div class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                    <div class="flex flex-wrap gap-2">
-                        {% if object.assigned_employee %}
-                            <a href="{% url 'inventory:item-return-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition">
-                                Devolver ao Estoque
-                            </a>
-                        {% else %}
-                            {% if object.status != 'discarded' %}
-                                <a href="{% url 'inventory:item-add-stock' object.pk %}" class="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition">
-                                    + Add Unidades
-                                </a>
-                                <a href="{% url 'inventory:item-assign' object.pk %}" class="inline-flex items-center rounded-lg bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition">
-                                    Vincular / Baixa
-                                </a>
-                            {% endif %}
-                        {% endif %}
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                <span class="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-sm font-black
+                                    {% if object.quantity == 0 %}bg-rose-100 text-rose-800 border border-rose-200
+                                    {% elif object.is_below_minimum %}bg-amber-100 text-amber-900 border border-amber-300
+                                    {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                                    {{ object.quantity }} un.
+                                </span>
+                                {% if object.minimum_quantity > 0 %}
+                                    <span class="block text-[10px] text-slate-400 mt-0.5">mín: {{ object.minimum_quantity }}</span>
+                                {% endif %}
+                            </td>
 
-                        {% if object.status != 'discarded' %}
-                            <a href="{% url 'inventory:item-discard' object.pk %}" class="inline-flex items-center rounded-lg bg-rose-50 border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 transition" title="Marcar como descartado">
-                                Descartar
-                            </a>
-                        {% endif %}
-                    </div>
+                            <td class="px-4 py-4 text-xs font-bold text-slate-900 text-right whitespace-nowrap">
+                                {{ object.total_value|currency }}
+                            </td>
 
-                    <div class="flex gap-2">
-                        {% if detail_url_name %}
-                            <a href="{% url detail_url_name object.pk %}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">Detalhes</a>
-                        {% endif %}
-                        {% if update_url_name %}
-                            <a href="{% url update_url_name object.pk %}" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 transition">Editar</a>
-                        {% endif %}
-                        {% if delete_url_name %}
-                            <a href="{% url delete_url_name object.pk %}" class="rounded-lg bg-rose-50 border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 transition">Excluir</a>
-                        {% endif %}
-                    </div>
-                </div>
-            </article>
-        {% empty %}
-            <article class="col-span-full rounded-2xl bg-white p-12 text-center shadow-sm">
-                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <h3 class="mt-2 text-sm font-semibold text-slate-900">Nenhum equipamento encontrado</h3>
-                <p class="mt-1 text-sm text-slate-500">Nenhum item de estoque ou equipamento corresponde aos filtros aplicados.</p>
-                {% if q or selected_status or selected_branch or selected_category or selected_colaborador %}
-                    <div class="mt-4">
-                        <a href="{% url 'inventory:item-list' %}" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
-                            Limpar Todos os Filtros
-                        </a>
-                    </div>
-                {% endif %}
-            </article>
-        {% endfor %}
+                            <td class="px-4 py-4 text-xs text-slate-700 whitespace-nowrap">
+                                <span class="font-medium">{{ object.branch.name }}</span>
+                                <span class="text-slate-400 text-[11px] block">({{ object.branch.code }})</span>
+                            </td>
+
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold
+                                    {% if object.status == 'in_stock' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                    {% elif object.status == 'in_use' %}bg-amber-50 text-amber-700 border border-amber-200
+                                    {% elif object.status == 'in_maintenance' %}bg-orange-50 text-orange-700 border border-orange-200
+                                    {% elif object.status == 'discarded' %}bg-rose-50 text-rose-700 border border-rose-200
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                    {{ object.get_status_display }}
+                                </span>
+                            </td>
+
+                            <td class="px-5 py-4 text-right whitespace-nowrap">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition" title="Adicionar unidades ao estoque deste item">
+                                        + Entrada
+                                    </a>
+                                    {% if object.quantity > 0 %}
+                                        <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-50 border border-sky-200 px-2.5 py-1 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition" title="Entregar unidade ao colaborador">
+                                            Vincular / Saída
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'inventory:item-detail' object.pk %}" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                                        Detalhes
+                                    </a>
+                                    <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 transition">
+                                        Editar
+                                    </a>
+                                    <a href="{% url 'inventory:item-discard' object.pk %}" class="rounded-lg bg-rose-50 border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 transition" title="Descartar item">
+                                        Descartar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-500">
+                                <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <h3 class="text-sm font-semibold text-slate-900">Nenhum item encontrado no estoque</h3>
+                                <p class="mt-1 text-sm text-slate-500">Nenhum item cadastrado corresponde aos filtros selecionados.</p>
+                                <div class="mt-4 flex justify-center gap-3">
+                                    <a href="{% url 'inventory:quick-stock-entry' %}" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
+                                        + Entrada de Estoque
+                                    </a>
+                                    <a href="{% url 'inventory:item-create' %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition">
+                                        + Cadastrar Novo Item
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 {% endblock %}
+
 

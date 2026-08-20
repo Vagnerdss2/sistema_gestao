@@ -6,6 +6,9 @@ app_name = "inventory"
 
 urlpatterns = [
     path("", views.InventoryItemListView.as_view(), name="item-list"),
+    path("inventario/", views.CollaboratorInventoryListView.as_view(), name="inventory-list"),
+    path("entrada-estoque/", views.QuickStockEntryView.as_view(), name="quick-stock-entry"),
+    path("atribuir-colaborador/", views.QuickAssignView.as_view(), name="quick-assign"),
     path("novo/", views.InventoryItemCreateView.as_view(), name="item-create"),
     path("<int:pk>/", views.InventoryItemDetailView.as_view(), name="item-detail"),
     path("<int:pk>/editar/", views.InventoryItemUpdateView.as_view(), name="item-update"),

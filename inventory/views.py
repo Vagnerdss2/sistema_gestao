@@ -1,34 +1,133 @@
+from decimal import Decimal
+
 from django.contrib import messages
-from django.db import transaction
-from django.db.models import Q
+from django.db import models, transaction
+from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic.edit import FormView
 
 from core.views import AppCreateView, AppDeleteView, AppDetailView, AppFormPageView, AppListView, AppUpdateView
-from inventory.forms import AddStockForm, AssignEmployeeForm, DiscardEquipmentForm, InventoryItemForm, ReturnStockForm
+from inventory.forms import (
+    AddStockForm,
+    AssignEmployeeForm,
+    DiscardEquipmentForm,
+    InventoryItemForm,
+    QuickStockEntryForm,
+    ReturnStockForm,
+)
 from inventory.models import InventoryItem, InventoryStatus, MovementType, StockMovement
-from organization.models import Branch, Employee, EquipmentCategory
+from organization.models import Branch, Department, Employee, EquipmentCategory
 
 
 class InventoryItemListView(AppListView):
+    """Aba Estoque: Lista apenas os itens cadastrados em estoque com suas informações."""
+
     model = InventoryItem
     template_name = "inventory/item_list.html"
-    page_title = "Inventário e Equipamentos"
-    page_description = "Gestão completa de equipamentos em uso, filiais, colaboradores vinculados, estoque e descartes."
+    page_title = "Controle de Estoque"
+    page_description = "Itens e equipamentos cadastrados no estoque, quantidades disponíveis, data de aquisição e valores."
     create_url_name = "inventory:item-create"
     update_url_name = "inventory:item-update"
     detail_url_name = "inventory:item-detail"
     delete_url_name = "inventory:item-delete"
 
     def get_queryset(self):
-        qs = InventoryItem.objects.select_related("category", "branch", "assigned_employee").order_by("name")
+        # Apenas itens cadastrados no estoque (sem colaborador vinculado)
+        qs = (
+            InventoryItem.objects.filter(assigned_employee__isnull=True)
+            .select_related("category", "branch")
+            .order_by("name", "brand", "model")
+        )
+
         q = self.request.GET.get("q", "").strip()
         status_filter = self.request.GET.get("status", "").strip()
         branch_filter = self.request.GET.get("branch", "").strip()
         category_filter = self.request.GET.get("category", "").strip()
-        colaborador = self.request.GET.get("colaborador", "").strip()
+        low_stock_filter = self.request.GET.get("low_stock", "").strip()
+
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q)
+                | Q(model__icontains=q)
+                | Q(brand__icontains=q)
+                | Q(serial_number__icontains=q)
+                | Q(asset_tag__icontains=q)
+                | Q(notes__icontains=q)
+                | Q(category__name__icontains=q)
+            )
+
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        else:
+            # Por padrao nao exibe descartados a menos que seja filtrado
+            qs = qs.exclude(status=InventoryStatus.DISCARDED)
+
+        if branch_filter and branch_filter.isdigit():
+            qs = qs.filter(branch_id=int(branch_filter))
+
+        if category_filter and category_filter.isdigit():
+            qs = qs.filter(category_id=int(category_filter))
+
+        if low_stock_filter == "1":
+            qs = qs.filter(quantity__lte=F("minimum_quantity"))
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        stock_items = InventoryItem.objects.filter(assigned_employee__isnull=True).exclude(status=InventoryStatus.DISCARDED)
+
+        total_registered_items = stock_items.count()
+        total_physical_units = stock_items.aggregate(total=Sum("quantity"))["total"] or 0
+        total_stock_value = stock_items.aggregate(
+            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField())
+        )["total"] or Decimal("0.00")
+        low_stock_count = stock_items.filter(quantity__lte=F("minimum_quantity")).count()
+
+        context["total_registered_items"] = total_registered_items
+        context["total_physical_units"] = total_physical_units
+        context["total_stock_value"] = total_stock_value
+        context["low_stock_count"] = low_stock_count
+
+        context["branches"] = Branch.objects.order_by("name")
+        context["categories"] = EquipmentCategory.objects.order_by("name")
+        context["status_choices"] = InventoryStatus.choices
+
+        context["q"] = self.request.GET.get("q", "").strip()
+        context["selected_status"] = self.request.GET.get("status", "").strip()
+        context["selected_branch"] = self.request.GET.get("branch", "").strip()
+        context["selected_category"] = self.request.GET.get("category", "").strip()
+        context["selected_low_stock"] = self.request.GET.get("low_stock", "").strip()
+        return context
+
+
+class CollaboratorInventoryListView(AppListView):
+    """Aba Inventário: Lista os itens e equipamentos vinculados a colaboradores."""
+
+    model = InventoryItem
+    template_name = "inventory/inventory_list.html"
+    page_title = "Inventário de Colaboradores"
+    page_description = "Itens e equipamentos sob responsabilidade e em uso pelos colaboradores da empresa."
+    create_url_name = ""
+    update_url_name = "inventory:item-update"
+    detail_url_name = "inventory:item-detail"
+    delete_url_name = "inventory:item-delete"
+
+    def get_queryset(self):
+        # Apenas itens vinculados a colaboradores
+        qs = (
+            InventoryItem.objects.filter(assigned_employee__isnull=False)
+            .select_related("category", "branch", "assigned_employee", "assigned_employee__department", "assigned_employee__branch")
+            .order_by("assigned_employee__full_name", "name")
+        )
+
+        q = self.request.GET.get("q", "").strip()
+        employee_filter = self.request.GET.get("colaborador", "").strip()
+        branch_filter = self.request.GET.get("branch", "").strip()
+        department_filter = self.request.GET.get("department", "").strip()
+        category_filter = self.request.GET.get("category", "").strip()
 
         if q:
             qs = qs.filter(
@@ -43,54 +142,223 @@ class InventoryItemListView(AppListView):
                 | Q(assigned_employee__email__icontains=q)
             )
 
-        if status_filter:
-            qs = qs.filter(status=status_filter)
+        if employee_filter:
+            if employee_filter.isdigit():
+                qs = qs.filter(assigned_employee_id=int(employee_filter))
+            else:
+                qs = qs.filter(
+                    Q(assigned_employee__full_name__icontains=employee_filter)
+                    | Q(assigned_employee__email__icontains=employee_filter)
+                )
 
         if branch_filter and branch_filter.isdigit():
-            qs = qs.filter(branch_id=int(branch_filter))
+            qs = qs.filter(Q(branch_id=int(branch_filter)) | Q(assigned_employee__branch_id=int(branch_filter)))
+
+        if department_filter and department_filter.isdigit():
+            qs = qs.filter(assigned_employee__department_id=int(department_filter))
 
         if category_filter and category_filter.isdigit():
             qs = qs.filter(category_id=int(category_filter))
-
-        if colaborador:
-            if colaborador.isdigit():
-                qs = qs.filter(assigned_employee_id=int(colaborador))
-            else:
-                qs = qs.filter(
-                    Q(assigned_employee__full_name__icontains=colaborador)
-                    | Q(assigned_employee__email__icontains=colaborador)
-                )
 
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        all_items = InventoryItem.objects.all()
+        assigned_items = InventoryItem.objects.filter(assigned_employee__isnull=False)
 
-        context["total_items"] = all_items.count()
-        context["in_use_count"] = all_items.filter(status=InventoryStatus.IN_USE).count()
-        context["in_stock_count"] = all_items.filter(status=InventoryStatus.IN_STOCK).count()
-        context["discarded_count"] = all_items.filter(status=InventoryStatus.DISCARDED).count()
-        context["maintenance_count"] = all_items.filter(status=InventoryStatus.IN_MAINTENANCE).count()
+        total_assigned_items = assigned_items.count()
+        total_assigned_units = assigned_items.aggregate(total=Sum("quantity"))["total"] or 0
+        total_assigned_value = assigned_items.aggregate(
+            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField())
+        )["total"] or Decimal("0.00")
+        total_collaborators = assigned_items.values("assigned_employee_id").distinct().count()
+
+        context["total_assigned_items"] = total_assigned_items
+        context["total_assigned_units"] = total_assigned_units
+        context["total_assigned_value"] = total_assigned_value
+        context["total_collaborators"] = total_collaborators
 
         context["employees"] = Employee.objects.filter(is_active=True).order_by("full_name")
         context["branches"] = Branch.objects.order_by("name")
+        context["departments"] = Department.objects.order_by("name")
         context["categories"] = EquipmentCategory.objects.order_by("name")
-        context["status_choices"] = InventoryStatus.choices
 
         context["q"] = self.request.GET.get("q", "").strip()
-        context["selected_status"] = self.request.GET.get("status", "").strip()
-        context["selected_branch"] = self.request.GET.get("branch", "").strip()
-        context["selected_category"] = self.request.GET.get("category", "").strip()
         context["selected_colaborador"] = self.request.GET.get("colaborador", "").strip()
+        context["selected_branch"] = self.request.GET.get("branch", "").strip()
+        context["selected_department"] = self.request.GET.get("department", "").strip()
+        context["selected_category"] = self.request.GET.get("category", "").strip()
         return context
+
+
+class QuickStockEntryView(AppFormPageView, FormView):
+    """Entrada rápida de estoque utilizando um item já cadastrado no catálogo."""
+
+    form_class = QuickStockEntryForm
+    template_name = "shared/object_form.html"
+    cancel_url_name = "inventory:item-list"
+    submit_label = "Registrar Entrada no Estoque"
+    page_title = "Nova Entrada de Estoque"
+    page_description = "Selecione um item já cadastrado para adicionar novas unidades ao estoque sem precisar recadastrar tudo."
+
+    def form_valid(self, form):
+        item = form.cleaned_data["item"]
+        quantity = form.cleaned_data["quantity"]
+        acquisition_date = form.cleaned_data.get("acquisition_date")
+        unit_price = form.cleaned_data.get("unit_price")
+        reference = form.cleaned_data.get("reference", "")
+        notes = form.cleaned_data.get("notes", "")
+
+        StockMovement.register(
+            item=item,
+            movement_type=MovementType.ENTRY,
+            quantity=quantity,
+            unit_price=unit_price,
+            acquisition_date=acquisition_date,
+            reference=reference or "Entrada de estoque avulsa",
+            notes=notes,
+        )
+
+        messages.success(
+            self.request,
+            f"Entrada de {quantity} unidade(s) registrada com sucesso para o item '{item.name}'! Estoque total: {item.quantity}.",
+        )
+        return redirect("inventory:item-list")
+
+
+class QuickAssignView(AppFormPageView, FormView):
+    """Atribuição direta de item do estoque para um colaborador."""
+
+    form_class = AssignEmployeeForm
+    template_name = "shared/object_form.html"
+    cancel_url_name = "inventory:inventory-list"
+    submit_label = "Atribuir ao Colaborador"
+    page_title = "Atribuir Equipamento ao Colaborador"
+    page_description = "Selecione um item disponível em estoque e vincule-o ao colaborador responsável."
+
+    def get_initial(self):
+        initial = super().get_initial()
+        item_id = self.request.GET.get("item")
+        if item_id and item_id.isdigit():
+            initial["item"] = int(item_id)
+        employee_id = self.request.GET.get("employee")
+        if employee_id and employee_id.isdigit():
+            initial["employee"] = int(employee_id)
+        return initial
+
+    def form_valid(self, form):
+        item = form.cleaned_data.get("item")
+        employee = form.cleaned_data["employee"]
+        quantity = form.cleaned_data["quantity"]
+        notes = form.cleaned_data.get("notes", "")
+
+        if not item:
+            form.add_error("item", "Selecione um item do estoque para atribuir.")
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            source_item = InventoryItem.objects.select_for_update().get(pk=item.pk)
+
+            if source_item.quantity < quantity:
+                form.add_error(
+                    "quantity",
+                    f"Quantidade informada ({quantity}) é superior ao estoque disponível ({source_item.quantity}).",
+                )
+                return self.form_invalid(form)
+
+            # Unique serialized asset
+            if (source_item.serial_number or source_item.asset_tag) and source_item.quantity == 1:
+                source_item.assigned_employee = employee
+                source_item.status = InventoryStatus.IN_USE
+                if employee.branch_id != source_item.branch_id:
+                    source_item.branch = employee.branch
+                source_item.save()
+
+                StockMovement.objects.create(
+                    item=source_item,
+                    movement_type=MovementType.EXIT,
+                    quantity=1,
+                    unit_price=source_item.unit_price,
+                    acquisition_date=source_item.acquisition_date,
+                    reference=f"Vínculo com colaborador: {employee.full_name}",
+                    notes=notes,
+                )
+            else:
+                # Pool item: deduct quantity from pool, create/update assigned IN_USE item entry
+                source_item.quantity -= quantity
+                source_item.save(update_fields=["quantity", "updated_at"])
+
+                StockMovement.objects.create(
+                    item=source_item,
+                    movement_type=MovementType.EXIT,
+                    quantity=quantity,
+                    unit_price=source_item.unit_price,
+                    acquisition_date=source_item.acquisition_date,
+                    reference=f"Baixa por entrega ao colaborador: {employee.full_name}",
+                    notes=notes,
+                )
+
+                assigned_item = InventoryItem.objects.filter(
+                    name=source_item.name,
+                    category=source_item.category,
+                    brand=source_item.brand,
+                    model=source_item.model,
+                    branch=employee.branch,
+                    assigned_employee=employee,
+                    status=InventoryStatus.IN_USE,
+                    serial_number="",
+                    asset_tag="",
+                ).first()
+
+                if assigned_item:
+                    assigned_item.quantity += quantity
+                    if source_item.unit_price and not assigned_item.unit_price:
+                        assigned_item.unit_price = source_item.unit_price
+                    if source_item.acquisition_date and not assigned_item.acquisition_date:
+                        assigned_item.acquisition_date = source_item.acquisition_date
+                    if notes:
+                        assigned_item.notes = (assigned_item.notes + "\n" + notes).strip()
+                    assigned_item.save(update_fields=["quantity", "unit_price", "acquisition_date", "notes", "updated_at"])
+                else:
+                    assigned_item = InventoryItem.objects.create(
+                        name=source_item.name,
+                        category=source_item.category,
+                        brand=source_item.brand,
+                        model=source_item.model,
+                        serial_number="",
+                        asset_tag="",
+                        acquisition_date=source_item.acquisition_date,
+                        unit_price=source_item.unit_price,
+                        status=InventoryStatus.IN_USE,
+                        quantity=quantity,
+                        minimum_quantity=0,
+                        branch=employee.branch,
+                        assigned_employee=employee,
+                        notes=notes or f"Vinculado ao colaborador em {timezone.localdate().strftime('%d/%m/%Y')}",
+                    )
+
+                StockMovement.objects.create(
+                    item=assigned_item,
+                    movement_type=MovementType.ENTRY,
+                    quantity=quantity,
+                    unit_price=assigned_item.unit_price,
+                    acquisition_date=assigned_item.acquisition_date,
+                    reference=f"Item vinculado ao colaborador: {employee.full_name}",
+                    notes=notes,
+                )
+
+        messages.success(
+            self.request,
+            f"Equipamento atribuído com sucesso! {quantity} unidade(s) de '{source_item.name}' vinculada(s) a {employee.full_name}.",
+        )
+        return redirect("inventory:inventory-list")
 
 
 class InventoryItemCreateView(AppCreateView):
     model = InventoryItem
     form_class = InventoryItemForm
-    page_title = "Novo Item de Estoque"
-    page_description = "Cadastre um item de estoque ou patrimonio."
+    page_title = "Cadastrar Novo Item no Catálogo"
+    page_description = "Cadastre um novo item de estoque ou patrimônio. Este cadastro poderá ser reutilizado para futuras entradas de estoque."
     cancel_url_name = "inventory:item-list"
     success_url = reverse_lazy("inventory:item-list")
 
@@ -101,6 +369,8 @@ class InventoryItemCreateView(AppCreateView):
                 item=self.object,
                 movement_type=MovementType.ENTRY,
                 quantity=self.object.quantity,
+                unit_price=self.object.unit_price,
+                acquisition_date=self.object.acquisition_date,
                 reference="Entrada inicial de cadastro",
                 notes="Estoque registrado na criação do item.",
             )
@@ -112,7 +382,7 @@ class InventoryItemUpdateView(AppUpdateView):
     model = InventoryItem
     form_class = InventoryItemForm
     page_title = "Editar Item"
-    page_description = "Atualize dados de estoque, vinculacao e status."
+    page_description = "Atualize dados cadastrais, data de aquisição, valor, estoque e filiais."
     cancel_url_name = "inventory:item-list"
     success_url = reverse_lazy("inventory:item-list")
 
@@ -143,7 +413,7 @@ class InventoryItemAddStockView(AppFormPageView, FormView):
     form_class = AddStockForm
     template_name = "shared/object_form.html"
     cancel_url_name = "inventory:item-list"
-    submit_label = "Adicionar Unidades"
+    submit_label = "Adicionar Unidades ao Estoque"
 
     def dispatch(self, request, *args, **kwargs):
         self.item = get_object_or_404(InventoryItem, pk=kwargs["pk"])
@@ -152,11 +422,13 @@ class InventoryItemAddStockView(AppFormPageView, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = f"Adicionar Unidades ao Estoque: {self.item.name}"
-        context["page_description"] = f"Estoque atual: {self.item.quantity} unidade(s)."
+        context["page_description"] = f"Estoque atual: {self.item.quantity} unidade(s) | Filial: {self.item.branch.name}"
         return context
 
     def form_valid(self, form):
         quantity = form.cleaned_data["quantity"]
+        acquisition_date = form.cleaned_data.get("acquisition_date")
+        unit_price = form.cleaned_data.get("unit_price")
         reference = form.cleaned_data.get("reference", "")
         notes = form.cleaned_data.get("notes", "")
 
@@ -164,6 +436,8 @@ class InventoryItemAddStockView(AppFormPageView, FormView):
             item=self.item,
             movement_type=MovementType.ENTRY,
             quantity=quantity,
+            unit_price=unit_price,
+            acquisition_date=acquisition_date,
             reference=reference or "Entrada manual de unidades",
             notes=notes,
         )
@@ -217,6 +491,8 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                     item=source_item,
                     movement_type=MovementType.EXIT,
                     quantity=1,
+                    unit_price=source_item.unit_price,
+                    acquisition_date=source_item.acquisition_date,
                     reference=f"Vínculo com colaborador: {employee.full_name}",
                     notes=notes,
                 )
@@ -229,6 +505,8 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                     item=source_item,
                     movement_type=MovementType.EXIT,
                     quantity=quantity,
+                    unit_price=source_item.unit_price,
+                    acquisition_date=source_item.acquisition_date,
                     reference=f"Baixa por entrega ao colaborador: {employee.full_name}",
                     notes=notes,
                 )
@@ -247,9 +525,13 @@ class InventoryItemAssignView(AppFormPageView, FormView):
 
                 if assigned_item:
                     assigned_item.quantity += quantity
+                    if source_item.unit_price and not assigned_item.unit_price:
+                        assigned_item.unit_price = source_item.unit_price
+                    if source_item.acquisition_date and not assigned_item.acquisition_date:
+                        assigned_item.acquisition_date = source_item.acquisition_date
                     if notes:
                         assigned_item.notes = (assigned_item.notes + "\n" + notes).strip()
-                    assigned_item.save(update_fields=["quantity", "notes", "updated_at"])
+                    assigned_item.save(update_fields=["quantity", "unit_price", "acquisition_date", "notes", "updated_at"])
                 else:
                     assigned_item = InventoryItem.objects.create(
                         name=source_item.name,
@@ -258,6 +540,8 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                         model=source_item.model,
                         serial_number="",
                         asset_tag="",
+                        acquisition_date=source_item.acquisition_date,
+                        unit_price=source_item.unit_price,
                         status=InventoryStatus.IN_USE,
                         quantity=quantity,
                         minimum_quantity=0,
@@ -270,21 +554,23 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                     item=assigned_item,
                     movement_type=MovementType.ENTRY,
                     quantity=quantity,
+                    unit_price=assigned_item.unit_price,
+                    acquisition_date=assigned_item.acquisition_date,
                     reference=f"Item vinculado ao colaborador: {employee.full_name}",
                     notes=notes,
                 )
 
         messages.success(
             self.request,
-            f"Baixa de {quantity} unidade(s) efetuada! O item agora aparece na aba Estoque vinculado ao colaborador {employee.full_name}.",
+            f"Baixa de {quantity} unidade(s) efetuada com sucesso! O item agora consta na aba Inventário vinculado a {employee.full_name}.",
         )
-        return redirect("inventory:item-list")
+        return redirect("inventory:inventory-list")
 
 
 class InventoryItemReturnStockView(AppFormPageView, FormView):
     form_class = ReturnStockForm
     template_name = "shared/object_form.html"
-    cancel_url_name = "inventory:item-list"
+    cancel_url_name = "inventory:inventory-list"
     submit_label = "Devolver ao Estoque"
 
     def dispatch(self, request, *args, **kwargs):
@@ -314,42 +600,67 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
 
             emp_name = assigned_item.assigned_employee.full_name if assigned_item.assigned_employee else "Colaborador"
 
-            assigned_item.quantity -= quantity
-            if assigned_item.quantity <= 0:
-                assigned_item.delete()
+            # Serialized asset single item
+            if (assigned_item.serial_number or assigned_item.asset_tag) and assigned_item.quantity == 1:
+                assigned_item.assigned_employee = None
+                assigned_item.status = InventoryStatus.IN_STOCK
+                assigned_item.save(update_fields=["assigned_employee", "status", "updated_at"])
+
+                StockMovement.objects.create(
+                    item=assigned_item,
+                    movement_type=MovementType.ENTRY,
+                    quantity=1,
+                    unit_price=assigned_item.unit_price,
+                    acquisition_date=assigned_item.acquisition_date,
+                    reference=f"Devolução do colaborador: {emp_name}",
+                    notes=notes,
+                )
             else:
-                assigned_item.save(update_fields=["quantity", "updated_at"])
+                # Pool item
+                assigned_item.quantity -= quantity
+                if assigned_item.quantity <= 0:
+                    assigned_item.delete()
+                else:
+                    assigned_item.save(update_fields=["quantity", "updated_at"])
 
-            pool_item, _ = InventoryItem.objects.get_or_create(
-                name=assigned_item.name,
-                category=assigned_item.category,
-                brand=assigned_item.brand,
-                model=assigned_item.model,
-                branch=assigned_item.branch,
-                assigned_employee=None,
-                status=InventoryStatus.IN_STOCK,
-                defaults={
-                    "quantity": 0,
-                    "minimum_quantity": 0,
-                    "notes": "Estoque geral unificado",
-                },
-            )
-            pool_item.quantity += quantity
-            pool_item.save(update_fields=["quantity", "updated_at"])
+                pool_item, _ = InventoryItem.objects.get_or_create(
+                    name=assigned_item.name,
+                    category=assigned_item.category,
+                    brand=assigned_item.brand,
+                    model=assigned_item.model,
+                    branch=assigned_item.branch,
+                    assigned_employee=None,
+                    status=InventoryStatus.IN_STOCK,
+                    defaults={
+                        "quantity": 0,
+                        "minimum_quantity": 0,
+                        "unit_price": assigned_item.unit_price,
+                        "acquisition_date": assigned_item.acquisition_date,
+                        "notes": "Estoque geral unificado",
+                    },
+                )
+                pool_item.quantity += quantity
+                if not pool_item.unit_price and assigned_item.unit_price:
+                    pool_item.unit_price = assigned_item.unit_price
+                if not pool_item.acquisition_date and assigned_item.acquisition_date:
+                    pool_item.acquisition_date = assigned_item.acquisition_date
+                pool_item.save(update_fields=["quantity", "unit_price", "acquisition_date", "updated_at"])
 
-            StockMovement.objects.create(
-                item=pool_item,
-                movement_type=MovementType.ENTRY,
-                quantity=quantity,
-                reference=f"Devolução de estoque do colaborador: {emp_name}",
-                notes=notes,
-            )
+                StockMovement.objects.create(
+                    item=pool_item,
+                    movement_type=MovementType.ENTRY,
+                    quantity=quantity,
+                    unit_price=pool_item.unit_price,
+                    acquisition_date=pool_item.acquisition_date,
+                    reference=f"Devolução de estoque do colaborador: {emp_name}",
+                    notes=notes,
+                )
 
         messages.success(
             self.request,
             f"Devolução de {quantity} unidade(s) de '{self.item.name}' ao estoque geral concluída com sucesso!",
         )
-        return redirect("inventory:item-list")
+        return redirect("inventory:inventory-list")
 
 
 class InventoryItemDiscardView(AppFormPageView, FormView):
@@ -385,6 +696,8 @@ class InventoryItemDiscardView(AppFormPageView, FormView):
                 item=item,
                 movement_type=MovementType.EXIT,
                 quantity=item.quantity or 1,
+                unit_price=item.unit_price,
+                acquisition_date=item.acquisition_date,
                 reference="Baixa por Descarte",
                 notes=reason,
             )
@@ -394,4 +707,5 @@ class InventoryItemDiscardView(AppFormPageView, FormView):
             f"O equipamento '{item.name}' foi marcado como Descartado com sucesso.",
         )
         return redirect("inventory:item-list")
+
 

@@ -1,21 +1,25 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
-{% block title %}{{ object.name }} | Inventario{% endblock %}
+{% block title %}{{ object.name }} | Estoque & Inventário{% endblock %}
 {% block page_title %}Detalhes do Item{% endblock %}
-{% block page_description %}Historico patrimonial e movimentacoes do item selecionado.{% endblock %}
+{% block page_description %}Histórico patrimonial, dados de aquisição, valores e movimentações do item.{% endblock %}
 
 {% block content %}
     <section class="grid gap-6 xl:grid-cols-[2fr,1fr]">
-        <article class="rounded-2xl bg-white p-6 shadow-sm">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-xl font-bold
-                    {% if object.status == 'in_stock' %}text-emerald-700
-                    {% elif object.status == 'in_use' %}text-amber-700
-                    {% elif object.status == 'discarded' %}text-rose-700
-                    {% elif object.status == 'in_maintenance' %}text-orange-700
-                    {% else %}text-slate-900{% endif %}">
-                    {{ object.name }}
-                </h3>
+        <article class="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                    <h3 class="text-xl font-bold
+                        {% if object.status == 'in_stock' %}text-emerald-700
+                        {% elif object.status == 'in_use' %}text-amber-700
+                        {% elif object.status == 'discarded' %}text-rose-700
+                        {% elif object.status == 'in_maintenance' %}text-orange-700
+                        {% else %}text-slate-900{% endif %}">
+                        {{ object.name }}
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Cadastrado em {{ object.created_at|date:"d/m/Y H:i" }} &bull; Atualizado em {{ object.updated_at|date:"d/m/Y H:i" }}</p>
+                </div>
                 <div class="flex flex-wrap gap-2">
                     {% if object.assigned_employee %}
                         <a href="{% url 'inventory:item-return-stock' object.pk %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 transition">
@@ -24,10 +28,10 @@
                     {% else %}
                         {% if object.status != 'discarded' %}
                             <a href="{% url 'inventory:item-add-stock' object.pk %}" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition">
-                                + Add Unidades
+                                + Entrada de Unidades
                             </a>
                             <a href="{% url 'inventory:item-assign' object.pk %}" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
-                                Vincular / Baixa
+                                Vincular / Saída
                             </a>
                         {% endif %}
                     {% endif %}
@@ -36,56 +40,78 @@
                             Descartar
                         </a>
                     {% endif %}
-                    <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">Editar</a>
-                    <a href="{% url 'inventory:item-delete' object.pk %}" class="rounded-lg bg-slate-200 border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 transition">Excluir</a>
+                    <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition">Editar</a>
+                    <a href="{% url 'inventory:item-delete' object.pk %}" class="rounded-lg bg-slate-100 border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">Excluir</a>
                 </div>
             </div>
 
-            <dl class="grid gap-4 md:grid-cols-2">
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Categoria</dt><dd class="mt-1 font-medium">{{ object.category }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Filial</dt><dd class="mt-1 font-medium">{{ object.branch }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Modelo</dt><dd class="mt-1 font-medium">{{ object.model|default:"-" }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Marca</dt><dd class="mt-1 font-medium">{{ object.brand|default:"-" }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Serie</dt><dd class="mt-1 font-medium">{{ object.serial_number|default:"-" }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Patrimonio</dt><dd class="mt-1 font-medium">{{ object.asset_tag|default:"-" }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Status</dt><dd class="mt-1 font-medium">{{ object.get_status_display }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Quantidade</dt><dd class="mt-1 font-medium">{{ object.quantity }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Minimo</dt><dd class="mt-1 font-medium">{{ object.minimum_quantity }}</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4"><dt class="text-sm text-slate-500">Colaborador</dt><dd class="mt-1 font-medium">{{ object.assigned_employee|default:"-" }}</dd></div>
+            <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Categoria</dt><dd class="mt-1 font-bold text-slate-800">{{ object.category.name }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Filial</dt><dd class="mt-1 font-bold text-slate-800">{{ object.branch.name }} ({{ object.branch.code }})</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Marca / Modelo</dt><dd class="mt-1 font-bold text-slate-800">{{ object.brand|default:"-" }} {{ object.model }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Número de Série</dt><dd class="mt-1 font-bold text-slate-800 font-mono">{{ object.serial_number|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Patrimônio</dt><dd class="mt-1 font-bold text-slate-800 font-mono">{{ object.asset_tag|default:"-" }}</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Status Atual</dt><dd class="mt-1 font-bold text-slate-800">{{ object.get_status_display }}</dd></div>
+                
+                <div class="rounded-xl border border-sky-200 p-4 bg-sky-50/40"><dt class="text-xs font-semibold uppercase text-sky-800">Data de Aquisição</dt><dd class="mt-1 font-bold text-slate-900">{{ object.acquisition_date|date:"d/m/Y"|default:"Não informada" }}</dd></div>
+                <div class="rounded-xl border border-indigo-200 p-4 bg-indigo-50/40"><dt class="text-xs font-semibold uppercase text-indigo-800">Valor Unitário</dt><dd class="mt-1 font-black text-indigo-900">{{ object.unit_price|currency }}</dd></div>
+                <div class="rounded-xl border border-indigo-200 p-4 bg-indigo-50/40"><dt class="text-xs font-semibold uppercase text-indigo-800">Valor Total do Lote/Item</dt><dd class="mt-1 font-black text-indigo-900">{{ object.total_value|currency }}</dd></div>
+
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Quantidade</dt><dd class="mt-1 font-black text-emerald-700 text-lg">{{ object.quantity }} un.</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Mínimo de Alerta</dt><dd class="mt-1 font-bold text-slate-800">{{ object.minimum_quantity }} un.</dd></div>
+                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Colaborador Vinculado</dt><dd class="mt-1 font-bold text-amber-800">{{ object.assigned_employee|default:"Disponível em Estoque" }}</dd></div>
             </dl>
         </article>
 
-        <article class="rounded-2xl bg-white p-6 shadow-sm">
-            <h3 class="text-lg font-semibold">Observacoes</h3>
-            <p class="mt-3 text-sm text-slate-600">{{ object.notes|default:"Sem observacoes." }}</p>
+        <article class="rounded-2xl bg-white p-6 shadow-sm border border-slate-200 flex flex-col">
+            <h3 class="text-lg font-bold text-slate-900">Observações & Descrição</h3>
+            <div class="mt-3 flex-1 rounded-xl bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-line border border-slate-100">
+                {{ object.notes|default:"Nenhuma observação cadastrada." }}
+            </div>
         </article>
     </section>
 
-    <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+    <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
         <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-lg font-semibold">Movimentacoes</h3>
-            <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Voltar</a>
+            <h3 class="text-lg font-bold text-slate-900">Histórico de Movimentações</h3>
+            <div class="flex gap-2">
+                <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Voltar ao Estoque</a>
+                <a href="{% url 'inventory:inventory-list' %}" class="rounded-lg bg-slate-100 border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">Ver Inventário</a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-left text-sm">
-                <thead class="border-b border-slate-200 text-slate-500">
+                <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-500">
                     <tr>
-                        <th class="px-4 py-3">Data</th>
+                        <th class="px-4 py-3">Data / Hora</th>
                         <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Quantidade</th>
-                        <th class="px-4 py-3">Referencia</th>
+                        <th class="px-4 py-3 text-center">Quantidade</th>
+                        <th class="px-4 py-3 text-right">Valor Unitário</th>
+                        <th class="px-4 py-3 text-right">Valor Total</th>
+                        <th class="px-4 py-3">Referência / Documento</th>
+                        <th class="px-4 py-3">Observações</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-100">
                     {% for movement in object.movements.all %}
-                        <tr class="border-b border-slate-100">
-                            <td class="px-4 py-3">{{ movement.created_at|date:"d/m/Y H:i" }}</td>
-                            <td class="px-4 py-3">{{ movement.get_movement_type_display }}</td>
-                            <td class="px-4 py-3">{{ movement.quantity }}</td>
-                            <td class="px-4 py-3">{{ movement.reference|default:"-" }}</td>
+                        <tr class="hover:bg-slate-50/60 transition">
+                            <td class="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{{ movement.created_at|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold
+                                    {% if movement.movement_type == 'entry' or movement.movement_type == 'purchase' %}bg-emerald-100 text-emerald-800
+                                    {% elif movement.movement_type == 'exit' or movement.movement_type == 'service_usage' %}bg-amber-100 text-amber-800
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                    {{ movement.get_movement_type_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-800 whitespace-nowrap">{{ movement.quantity }}</td>
+                            <td class="px-4 py-3 text-right text-xs text-slate-600 whitespace-nowrap">{{ movement.unit_price|currency }}</td>
+                            <td class="px-4 py-3 text-right text-xs font-bold text-slate-800 whitespace-nowrap">{{ movement.total_value|currency }}</td>
+                            <td class="px-4 py-3 text-xs text-slate-700 whitespace-nowrap">{{ movement.reference|default:"-" }}</td>
+                            <td class="px-4 py-3 text-xs text-slate-500">{{ movement.notes|default:"-" }}</td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">Nenhuma movimentacao registrada.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-6 text-center text-slate-500">Nenhuma movimentação registrada para este item.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

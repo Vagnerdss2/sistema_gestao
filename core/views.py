@@ -1,13 +1,14 @@
+from decimal import Decimal
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 from inventory.models import InventoryItem, InventoryStatus
 from kanban.models import KanbanTask, TaskStatus
-from procurement.models import PurchaseOrder, PurchaseStatus
 from supportdesk.models import ServiceOrder
 
 
@@ -21,9 +22,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         current_month = timezone.localdate().month
 
         inventory_totals = InventoryItem.objects.aggregate(
-            total_in_stock=Sum("quantity", filter=Q(status=InventoryStatus.IN_STOCK)),
-            total_in_use=Count("id", filter=Q(status=InventoryStatus.IN_USE)),
-            low_stock=Count("id", filter=Q(quantity__lte=models.F("minimum_quantity"))),
+            total_in_stock=Sum("quantity", filter=Q(status=InventoryStatus.IN_STOCK, assigned_employee__isnull=True)),
+            total_in_use=Sum("quantity", filter=Q(assigned_employee__isnull=False) | Q(status=InventoryStatus.IN_USE)),
+            low_stock=Count("id", filter=Q(assigned_employee__isnull=True, quantity__lte=models.F("minimum_quantity"))),
+            stock_value=Sum(
+                F("quantity") * F("unit_price"),
+                filter=Q(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK),
+                output_field=models.DecimalField(),
+            ),
         )
 
         service_summary = (
@@ -33,12 +39,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             .order_by("-total")[:8]
         )
 
+        total_services_month = ServiceOrder.objects.filter(service_datetime__month=current_month).count()
+
         context.update(
             {
                 "inventory_totals": inventory_totals,
-                "pending_deliveries": PurchaseOrder.objects.filter(
-                    status__in=[PurchaseStatus.APPROVED, PurchaseStatus.PURCHASED]
-                ).count(),
+                "total_services_month": total_services_month,
                 "overdue_tasks": KanbanTask.objects.filter(
                     due_date__lt=timezone.localdate(),
                 )
@@ -50,8 +56,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 )[:5],
                 "service_summary": service_summary,
                 "low_stock_items": InventoryItem.objects.filter(
-                    quantity__lte=models.F("minimum_quantity")
+                    assigned_employee__isnull=True,
+                    quantity__lte=models.F("minimum_quantity"),
                 )
+                .exclude(status=InventoryStatus.DISCARDED)
                 .select_related("category", "branch")
                 .order_by("quantity", "name")[:8],
             }

@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load core_extras %}
+
+{% block title %}{{ page_title }} | Gestão de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <!-- Summary Metrics -->
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-amber-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-amber-700">Equipamentos em Uso</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-amber-600">{{ total_assigned_items }}</span>
+                <span class="text-xs font-medium text-slate-500">registros</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-sky-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-sky-700">Unidades Alocadas</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-slate-900">{{ total_assigned_units }}</span>
+                <span class="text-xs font-medium text-slate-500">unidades</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-indigo-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-indigo-700">Valor em Uso</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-indigo-900">{{ total_assigned_value|currency }}</span>
+                <span class="text-xs font-medium text-indigo-600/80">alocado</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-emerald-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Colaboradores com Ativos</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-emerald-600">{{ total_collaborators }}</span>
+                <span class="text-xs font-medium text-emerald-600/80">atendidos</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Header -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-bold text-slate-900">Itens em Uso por Colaboradores</h2>
+            <p class="text-xs text-slate-500">Relação nominal de todos os ativos e equipamentos sob posse de colaboradores.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventory:quick-assign' %}" class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                + Atribuir Equipamento ao Colaborador
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="mb-6 rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
+        <form method="get" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
+            <div>
+                <label for="search-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar Item / Colaborador</label>
+                <input
+                    type="text"
+                    id="search-input"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Nome, e-mail, série, patrimônio..."
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+            </div>
+
+            <div>
+                <label for="colaborador-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Colaborador</label>
+                <select
+                    id="colaborador-select"
+                    name="colaborador"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                    <option value="">Todos os colaboradores</option>
+                    {% for emp in employees %}
+                        <option value="{{ emp.pk }}" {% if selected_colaborador == emp.pk|stringformat:"s" %}selected{% endif %}>{{ emp.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="branch-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Filial</label>
+                <select
+                    id="branch-select"
+                    name="branch"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                    <option value="">Todas as filiais</option>
+                    {% for br in branches %}
+                        <option value="{{ br.pk }}" {% if selected_branch == br.pk|stringformat:"s" %}selected{% endif %}>{{ br.name }} ({{ br.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="department-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Setor</label>
+                <select
+                    id="department-select"
+                    name="department"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                    <option value="">Todos os setores</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.pk }}" {% if selected_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="category-select" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Categoria</label>
+                <select
+                    id="category-select"
+                    name="category"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                    <option value="">Todas as categorias</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sm:col-span-2 lg:col-span-5 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 transition">
+                        Aplicar Filtros
+                    </button>
+                    {% if q or selected_colaborador or selected_branch or selected_department or selected_category %}
+                        <a href="{% url 'inventory:inventory-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                            Limpar Filtros
+                        </a>
+                    {% endif %}
+                </div>
+                <span class="text-xs font-medium text-slate-500">{{ objects|length }} item(ns) em uso listado(s)</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Items Table (List View) -->
+    <div class="rounded-2xl bg-white shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <tr>
+                        <th class="px-5 py-3.5">Colaborador / Responsável</th>
+                        <th class="px-4 py-3.5">Filial / Setor</th>
+                        <th class="px-4 py-3.5">Equipamento / Item</th>
+                        <th class="px-4 py-3.5">Série / Patrimônio</th>
+                        <th class="px-4 py-3.5">Data Aquisição</th>
+                        <th class="px-4 py-3.5 text-right">Valor Unitário</th>
+                        <th class="px-4 py-3.5 text-center">Qtd. em Uso</th>
+                        <th class="px-4 py-3.5 text-right">Valor Total</th>
+                        <th class="px-5 py-3.5 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for object in objects %}
+                        <tr class="hover:bg-slate-50/80 transition">
+                            <td class="px-5 py-4">
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-slate-900">{{ object.assigned_employee.full_name }}</span>
+                                    <span class="text-xs text-slate-500">{{ object.assigned_employee.job_title }}</span>
+                                    {% if object.assigned_employee.email %}
+                                        <span class="text-[11px] text-slate-400">{{ object.assigned_employee.email }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td class="px-4 py-4 text-xs text-slate-700 whitespace-nowrap">
+                                <span class="font-semibold text-slate-800">{{ object.assigned_employee.department.name|default:object.branch.name }}</span>
+                                <span class="text-slate-400 text-[11px] block">{{ object.assigned_employee.branch.name|default:object.branch.name }}</span>
+                            </td>
+
+                            <td class="px-4 py-4">
+                                <div class="flex flex-col">
+                                    <a href="{% url 'inventory:item-detail' object.pk %}" class="font-bold text-slate-900 hover:text-sky-600 transition">
+                                        {{ object.name }}
+                                    </a>
+                                    <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                        <span class="rounded bg-sky-50 px-2 py-0.5 font-medium text-sky-800">{{ object.category.name }}</span>
+                                        {% if object.brand or object.model %}
+                                            <span>{{ object.brand }} {{ object.model }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if object.notes %}
+                                        <p class="mt-1 text-[11px] text-slate-400 italic line-clamp-1" title="{{ object.notes }}">{{ object.notes }}</p>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td class="px-4 py-4 text-xs text-slate-600 whitespace-nowrap">
+                                {% if object.serial_number or object.asset_tag %}
+                                    <div class="font-mono text-slate-800 font-medium">
+                                        {% if object.serial_number %}S/N: {{ object.serial_number }}<br>{% endif %}
+                                        {% if object.asset_tag %}Patr: {{ object.asset_tag }}{% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-slate-400 italic">Item em lote</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-4 py-4 text-xs text-slate-600 whitespace-nowrap">
+                                {% if object.acquisition_date %}
+                                    <span class="font-medium text-slate-800">{{ object.acquisition_date|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="text-slate-400 italic">Não informada</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-4 py-4 text-xs font-semibold text-slate-800 text-right whitespace-nowrap">
+                                {{ object.unit_price|currency }}
+                            </td>
+
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                <span class="inline-flex items-center justify-center rounded-lg bg-amber-100 px-2.5 py-1 text-sm font-black text-amber-900 border border-amber-300">
+                                    {{ object.quantity }} un.
+                                </span>
+                            </td>
+
+                            <td class="px-4 py-4 text-xs font-bold text-slate-900 text-right whitespace-nowrap">
+                                {{ object.total_value|currency }}
+                            </td>
+
+                            <td class="px-5 py-4 text-right whitespace-nowrap">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a href="{% url 'inventory:item-return-stock' object.pk %}" class="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition" title="Devolver unidades deste item ao estoque geral">
+                                        Devolver ao Estoque
+                                    </a>
+                                    <a href="{% url 'inventory:item-detail' object.pk %}" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                                        Detalhes
+                                    </a>
+                                    <a href="{% url 'inventory:item-update' object.pk %}" class="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 transition">
+                                        Editar
+                                    </a>
+                                    <a href="{% url 'inventory:item-discard' object.pk %}" class="rounded-lg bg-rose-50 border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 transition" title="Descartar equipamento">
+                                        Descartar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-500">
+                                <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <h3 class="text-sm font-semibold text-slate-900">Nenhum equipamento em uso encontrado</h3>
+                                <p class="mt-1 text-sm text-slate-500">Nenhum item atribuído a colaboradores corresponde aos filtros selecionados.</p>
+                                <div class="mt-4">
+                                    <a href="{% url 'inventory:quick-assign' %}" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition">
+                                        + Atribuir Equipamento a Colaborador
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

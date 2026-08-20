@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
@@ -7,16 +9,16 @@ from core.models import TimeStampedModel
 class InventoryStatus(models.TextChoices):
     IN_STOCK = "in_stock", "Em Estoque"
     IN_USE = "in_use", "Em Uso"
-    IN_MAINTENANCE = "in_maintenance", "Em Manutencao"
+    IN_MAINTENANCE = "in_maintenance", "Em Manutenção"
     DISCARDED = "discarded", "Descartado"
 
 
 class MovementType(models.TextChoices):
     ENTRY = "entry", "Entrada"
-    EXIT = "exit", "Saida"
+    EXIT = "exit", "Saída"
     ADJUSTMENT = "adjustment", "Ajuste"
     PURCHASE = "purchase", "Compra"
-    SERVICE_USAGE = "service_usage", "Uso em Servico"
+    SERVICE_USAGE = "service_usage", "Uso em Serviço"
 
 
 class InventoryItem(TimeStampedModel):
@@ -31,8 +33,16 @@ class InventoryItem(TimeStampedModel):
     )
     model = models.CharField("modelo", max_length=120, blank=True)
     brand = models.CharField("marca", max_length=120, blank=True)
-    serial_number = models.CharField("numero de serie", max_length=120, blank=True)
-    asset_tag = models.CharField("patrimonio", max_length=120, blank=True)
+    serial_number = models.CharField("número de série", max_length=120, blank=True)
+    asset_tag = models.CharField("patrimônio", max_length=120, blank=True)
+    acquisition_date = models.DateField("data de aquisição", null=True, blank=True)
+    unit_price = models.DecimalField(
+        "valor do item (R$)",
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        blank=True,
+    )
     status = models.CharField(
         "status",
         max_length=20,
@@ -40,7 +50,7 @@ class InventoryItem(TimeStampedModel):
         default=InventoryStatus.IN_STOCK,
     )
     quantity = models.PositiveIntegerField("quantidade em estoque", default=0)
-    minimum_quantity = models.PositiveIntegerField("quantidade minima", default=0)
+    minimum_quantity = models.PositiveIntegerField("quantidade mínima", default=0)
     branch = models.ForeignKey(
         "organization.Branch",
         on_delete=models.PROTECT,
@@ -55,7 +65,7 @@ class InventoryItem(TimeStampedModel):
         related_name="assigned_inventory_items",
         verbose_name="colaborador vinculado",
     )
-    notes = models.TextField("observacoes", blank=True)
+    notes = models.TextField("observações", blank=True)
 
     class Meta:
         ordering = ("name", "brand", "model")
@@ -84,6 +94,22 @@ class InventoryItem(TimeStampedModel):
     def is_below_minimum(self) -> bool:
         return self.quantity <= self.minimum_quantity
 
+    @property
+    def total_value(self) -> Decimal:
+        return (self.unit_price or Decimal("0.00")) * (self.quantity or 0)
+
+    @property
+    def display_full_name(self) -> str:
+        parts = [self.name]
+        extra = f"{self.brand} {self.model}".strip()
+        if extra:
+            parts.append(f"({extra})")
+        if self.serial_number:
+            parts.append(f"[S/N: {self.serial_number}]")
+        elif self.asset_tag:
+            parts.append(f"[Patr: {self.asset_tag}]")
+        return " ".join(parts)
+
     def __str__(self) -> str:
         return f"{self.name} - {self.brand} {self.model}".strip()
 
@@ -98,13 +124,21 @@ class StockMovement(TimeStampedModel):
         verbose_name="item",
     )
     movement_type = models.CharField(
-        "tipo de movimentacao",
+        "tipo de movimentação",
         max_length=20,
         choices=MovementType.choices,
     )
     quantity = models.PositiveIntegerField("quantidade")
-    reference = models.CharField("referencia", max_length=160, blank=True)
-    notes = models.TextField("observacoes", blank=True)
+    unit_price = models.DecimalField(
+        "valor unitário (R$)",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    acquisition_date = models.DateField("data de aquisição", null=True, blank=True)
+    reference = models.CharField("referência", max_length=160, blank=True)
+    notes = models.TextField("observações", blank=True)
     purchase_order = models.ForeignKey(
         "procurement.PurchaseOrder",
         on_delete=models.SET_NULL,
@@ -119,16 +153,21 @@ class StockMovement(TimeStampedModel):
         null=True,
         blank=True,
         related_name="stock_movements",
-        verbose_name="ordem de servico",
+        verbose_name="ordem de serviço",
     )
 
     class Meta:
         ordering = ("-created_at",)
-        verbose_name = "movimentacao de estoque"
-        verbose_name_plural = "movimentacoes de estoque"
+        verbose_name = "movimentação de estoque"
+        verbose_name_plural = "movimentações de estoque"
 
     def __str__(self) -> str:
         return f"{self.get_movement_type_display()} - {self.item.name} ({self.quantity})"
+
+    @property
+    def total_value(self) -> Decimal:
+        price = self.unit_price or self.item.unit_price or Decimal("0.00")
+        return price * self.quantity
 
     @classmethod
     def register(
@@ -137,13 +176,15 @@ class StockMovement(TimeStampedModel):
         item: InventoryItem,
         movement_type: str,
         quantity: int,
+        unit_price=None,
+        acquisition_date=None,
         reference: str = "",
         notes: str = "",
         purchase_order=None,
         service_order=None,
     ) -> "StockMovement":
         if quantity <= 0:
-            raise ValidationError("A quantidade da movimentacao precisa ser positiva.")
+            raise ValidationError("A quantidade da movimentação precisa ser positiva.")
 
         delta = quantity
         if movement_type in {MovementType.EXIT, MovementType.SERVICE_USAGE}:
@@ -153,17 +194,28 @@ class StockMovement(TimeStampedModel):
             locked_item = InventoryItem.objects.select_for_update().get(pk=item.pk)
             new_quantity = locked_item.quantity + delta
             if new_quantity < 0:
-                raise ValidationError("Estoque insuficiente para realizar a movimentacao.")
+                raise ValidationError("Estoque insuficiente para realizar a movimentação.")
 
             locked_item.quantity = new_quantity
             if locked_item.quantity == 0 and locked_item.status == InventoryStatus.IN_STOCK:
                 locked_item.status = InventoryStatus.IN_USE if locked_item.assigned_employee_id else InventoryStatus.IN_STOCK
-            locked_item.save(update_fields=["quantity", "status", "updated_at"])
+
+            update_fields = ["quantity", "status", "updated_at"]
+            if unit_price is not None:
+                locked_item.unit_price = unit_price
+                update_fields.append("unit_price")
+            if acquisition_date is not None:
+                locked_item.acquisition_date = acquisition_date
+                update_fields.append("acquisition_date")
+
+            locked_item.save(update_fields=update_fields)
 
             return cls.objects.create(
                 item=locked_item,
                 movement_type=movement_type,
                 quantity=quantity,
+                unit_price=unit_price if unit_price is not None else locked_item.unit_price,
+                acquisition_date=acquisition_date if acquisition_date is not None else locked_item.acquisition_date,
                 reference=reference,
                 notes=notes,
                 purchase_order=purchase_order,

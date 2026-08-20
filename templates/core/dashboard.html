@@ -1,30 +1,51 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
-{% block title %}Dashboard | Gestao de TI{% endblock %}
+{% block title %}Dashboard | Gestão de TI{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block page_description %}Visao geral de estoque, compras, servicos e tarefas pendentes.{% endblock %}
+{% block page_description %}Visão geral de estoque, inventário de colaboradores, serviços e tarefas pendentes.{% endblock %}
 
 {% block content %}
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <article class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Itens em estoque</p>
-            <p class="mt-2 text-3xl font-semibold">{{ inventory_totals.total_in_stock|default:0 }}</p>
+        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+            <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Itens em Estoque</p>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-3xl font-black text-slate-900">{{ inventory_totals.total_in_stock|default:0 }}</span>
+                <span class="text-xs font-medium text-slate-500">unidades</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-500 font-medium">Valor: {{ inventory_totals.stock_value|currency }}</p>
         </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Patrimonios em uso</p>
-            <p class="mt-2 text-3xl font-semibold">{{ inventory_totals.total_in_use|default:0 }}</p>
+        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
+            <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">Inventário em Uso</p>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-3xl font-black text-slate-900">{{ inventory_totals.total_in_use|default:0 }}</span>
+                <span class="text-xs font-medium text-amber-700">com colaboradores</span>
+            </div>
+            <a href="{% url 'inventory:inventory-list' %}" class="mt-1 text-xs text-sky-700 hover:underline block font-medium">Ver inventário &rarr;</a>
         </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Alertas de estoque baixo</p>
-            <p class="mt-2 text-3xl font-semibold text-amber-600">{{ inventory_totals.low_stock|default:0 }}</p>
+        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
+            <p class="text-xs font-semibold uppercase tracking-wider text-rose-700">Alertas de Estoque Baixo</p>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-3xl font-black text-rose-600">{{ inventory_totals.low_stock|default:0 }}</span>
+                <span class="text-xs font-medium text-rose-600">itens críticos</span>
+            </div>
+            <a href="{% url 'inventory:item-list' %}?low_stock=1" class="mt-1 text-xs text-rose-600 hover:underline block font-medium">Ver itens críticos &rarr;</a>
         </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Compras pendentes de entrega</p>
-            <p class="mt-2 text-3xl font-semibold text-sky-700">{{ pending_deliveries }}</p>
+        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-sky-500">
+            <p class="text-xs font-semibold uppercase tracking-wider text-sky-700">Serviços no Mês</p>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-3xl font-black text-slate-900">{{ total_services_month|default:0 }}</span>
+                <span class="text-xs font-medium text-sky-700">atendimentos</span>
+            </div>
+            <a href="{% url 'supportdesk:service-list' %}" class="mt-1 text-xs text-sky-700 hover:underline block font-medium">Ver atendimentos &rarr;</a>
         </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Tarefas pendentes/atrasadas</p>
-            <p class="mt-2 text-3xl font-semibold text-rose-600">{{ open_tasks }}/{{ overdue_tasks }}</p>
+        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-violet-500">
+            <p class="text-xs font-semibold uppercase tracking-wider text-violet-700">Tarefas Kanban</p>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-3xl font-black text-slate-900">{{ open_tasks }}</span>
+                <span class="text-xs font-medium text-rose-600">({{ overdue_tasks }} atrasadas)</span>
+            </div>
+            <a href="{% url 'kanban:board' %}" class="mt-1 text-xs text-violet-700 hover:underline block font-medium">Acessar quadro &rarr;</a>
         </article>
     </section>
 
