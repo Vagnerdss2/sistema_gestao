@@ -21,8 +21,19 @@ from inventory.models import InventoryItem, InventoryStatus, MovementType, Stock
 from organization.models import Branch, Department, Employee, EquipmentCategory
 
 
+# ==============================================================================
+# ABA ESTOQUE (LISTA DE ITENS CADASTRADOS NO ESTOQUE GERAL)
+# ==============================================================================
+
 class InventoryItemListView(AppListView):
-    """Aba Estoque: Lista apenas os itens cadastrados em estoque com suas informações."""
+    """
+    Aba Estoque: Exibe a listagem em formato de tabela de todos os produtos e equipamentos cadastrados.
+    
+    Regra:
+    - Filtra estritamente itens onde 'assigned_employee__isnull=True' (apenas estoque geral disponível).
+    - Apresenta métricas consolidadas (total de itens cadastrados, unidades físicas, valor total e alertas de estoque baixo).
+    - Fornece filtros por texto (nome/marca/modelo/serial/patrimônio), filial, categoria, status e estoque baixo.
+    """
 
     model = InventoryItem
     template_name = "inventory/item_list.html"
@@ -34,7 +45,7 @@ class InventoryItemListView(AppListView):
     delete_url_name = "inventory:item-delete"
 
     def get_queryset(self):
-        # Apenas itens cadastrados no estoque (sem colaborador vinculado)
+        """Retorna apenas itens em estoque geral aplicando os filtros submetidos pelo usuário."""
         qs = (
             InventoryItem.objects.filter(assigned_employee__isnull=True)
             .select_related("category", "branch")
@@ -61,7 +72,7 @@ class InventoryItemListView(AppListView):
         if status_filter:
             qs = qs.filter(status=status_filter)
         else:
-            # Por padrao nao exibe descartados a menos que seja filtrado
+            # Por padrão não exibe descartados a menos que seja explicitamente filtrado
             qs = qs.exclude(status=InventoryStatus.DISCARDED)
 
         if branch_filter and branch_filter.isdigit():
@@ -76,6 +87,7 @@ class InventoryItemListView(AppListView):
         return qs
 
     def get_context_data(self, **kwargs):
+        """Calcula os cards de métricas do topo da página e carrega opções de filtros."""
         context = super().get_context_data(**kwargs)
         stock_items = InventoryItem.objects.filter(assigned_employee__isnull=True).exclude(status=InventoryStatus.DISCARDED)
 
@@ -103,8 +115,18 @@ class InventoryItemListView(AppListView):
         return context
 
 
+# ==============================================================================
+# ABA INVENTÁRIO (ITENS VINCULADOS A COLABORADORES)
+# ==============================================================================
+
 class CollaboratorInventoryListView(AppListView):
-    """Aba Inventário: Lista os itens e equipamentos vinculados a colaboradores."""
+    """
+    Aba Inventário: Lista exclusivamente os itens e equipamentos em uso nominal por colaboradores.
+    
+    Regra:
+    - Filtra estritamente itens onde 'assigned_employee__isnull=False'.
+    - Mostra colaborador responsável, filial, setor, valor do item, termo/observação e ações de devolução.
+    """
 
     model = InventoryItem
     template_name = "inventory/inventory_list.html"
@@ -116,7 +138,7 @@ class CollaboratorInventoryListView(AppListView):
     delete_url_name = "inventory:item-delete"
 
     def get_queryset(self):
-        # Apenas itens vinculados a colaboradores
+        """Retorna apenas itens com colaboradores vinculados aplicando os filtros."""
         qs = (
             InventoryItem.objects.filter(assigned_employee__isnull=False)
             .select_related("category", "branch", "assigned_employee", "assigned_employee__department", "assigned_employee__branch")
@@ -163,6 +185,7 @@ class CollaboratorInventoryListView(AppListView):
         return qs
 
     def get_context_data(self, **kwargs):
+        """Calcula métricas dos equipamentos em uso e popula os dropdowns de filtro."""
         context = super().get_context_data(**kwargs)
         assigned_items = InventoryItem.objects.filter(assigned_employee__isnull=False)
 
@@ -191,8 +214,17 @@ class CollaboratorInventoryListView(AppListView):
         return context
 
 
+# ==============================================================================
+# ENTRADA RÁPIDA DE ESTOQUE (REUTILIZAÇÃO DE CADASTRO)
+# ==============================================================================
+
 class QuickStockEntryView(AppFormPageView, FormView):
-    """Entrada rápida de estoque utilizando um item já cadastrado no catálogo."""
+    """
+    View de Entrada Rápida de Estoque (Reutilização de Cadastro).
+    
+    Permite ao usuário dar entrada de novas unidades selecionando um produto já existente
+    no catálogo através de um select, evitando recadastrar marca, modelo e especificações toda vez.
+    """
 
     form_class = QuickStockEntryForm
     template_name = "shared/object_form.html"
@@ -209,6 +241,7 @@ class QuickStockEntryView(AppFormPageView, FormView):
         reference = form.cleaned_data.get("reference", "")
         notes = form.cleaned_data.get("notes", "")
 
+        # Registra a movimentação atômica e atualiza o saldo do item
         StockMovement.register(
             item=item,
             movement_type=MovementType.ENTRY,
@@ -226,8 +259,17 @@ class QuickStockEntryView(AppFormPageView, FormView):
         return redirect("inventory:item-list")
 
 
+# ==============================================================================
+# ATRIBUIÇÃO RÁPIDA A COLABORADOR (SAÍDA / VÍNCULO)
+# ==============================================================================
+
 class QuickAssignView(AppFormPageView, FormView):
-    """Atribuição direta de item do estoque para um colaborador."""
+    """
+    View de Atribuição Direta de Equipamento ao Colaborador.
+    
+    Permite escolher um equipamento disponível em estoque e um colaborador,
+    transferindo as unidades do saldo geral para o registro em uso no Inventário.
+    """
 
     form_class = AssignEmployeeForm
     template_name = "shared/object_form.html"
@@ -237,6 +279,7 @@ class QuickAssignView(AppFormPageView, FormView):
     page_description = "Selecione um item disponível em estoque e vincule-o ao colaborador responsável."
 
     def get_initial(self):
+        """Pré-seleciona o item ou colaborador caso venham como parâmetros GET na URL."""
         initial = super().get_initial()
         item_id = self.request.GET.get("item")
         if item_id and item_id.isdigit():
@@ -259,6 +302,7 @@ class QuickAssignView(AppFormPageView, FormView):
         with transaction.atomic():
             source_item = InventoryItem.objects.select_for_update().get(pk=item.pk)
 
+            # Valida se há saldo suficiente no estoque para atender à entrega
             if source_item.quantity < quantity:
                 form.add_error(
                     "quantity",
@@ -266,7 +310,7 @@ class QuickAssignView(AppFormPageView, FormView):
                 )
                 return self.form_invalid(form)
 
-            # Unique serialized asset
+            # Caso 1: Item patrimonial único (com serial ou patrimônio)
             if (source_item.serial_number or source_item.asset_tag) and source_item.quantity == 1:
                 source_item.assigned_employee = employee
                 source_item.status = InventoryStatus.IN_USE
@@ -284,10 +328,12 @@ class QuickAssignView(AppFormPageView, FormView):
                     notes=notes,
                 )
             else:
-                # Pool item: deduct quantity from pool, create/update assigned IN_USE item entry
+                # Caso 2: Item em lote / genérico (periféricos, cabos, adaptadores)
+                # Subtrai a quantidade do lote no estoque geral
                 source_item.quantity -= quantity
                 source_item.save(update_fields=["quantity", "updated_at"])
 
+                # Registra a saída no estoque geral
                 StockMovement.objects.create(
                     item=source_item,
                     movement_type=MovementType.EXIT,
@@ -298,6 +344,7 @@ class QuickAssignView(AppFormPageView, FormView):
                     notes=notes,
                 )
 
+                # Localiza ou cria o registro alocado para o colaborador no status IN_USE
                 assigned_item = InventoryItem.objects.filter(
                     name=source_item.name,
                     category=source_item.category,
@@ -337,6 +384,7 @@ class QuickAssignView(AppFormPageView, FormView):
                         notes=notes or f"Vinculado ao colaborador em {timezone.localdate().strftime('%d/%m/%Y')}",
                     )
 
+                # Registra o histórico de entrada no inventário do colaborador
                 StockMovement.objects.create(
                     item=assigned_item,
                     movement_type=MovementType.ENTRY,
@@ -354,7 +402,12 @@ class QuickAssignView(AppFormPageView, FormView):
         return redirect("inventory:inventory-list")
 
 
+# ==============================================================================
+# CRUD BÁSICO DE ITENS DE ESTOQUE
+# ==============================================================================
+
 class InventoryItemCreateView(AppCreateView):
+    """Cadastro de um novo modelo/produto no catálogo de inventário."""
     model = InventoryItem
     form_class = InventoryItemForm
     page_title = "Cadastrar Novo Item no Catálogo"
@@ -363,6 +416,7 @@ class InventoryItemCreateView(AppCreateView):
     success_url = reverse_lazy("inventory:item-list")
 
     def form_valid(self, form):
+        """Ao criar o item com quantidade inicial > 0, gera automaticamente a primeira movimentação de entrada."""
         response = super().form_valid(form)
         if self.object.quantity > 0:
             StockMovement.objects.create(
@@ -379,6 +433,7 @@ class InventoryItemCreateView(AppCreateView):
 
 
 class InventoryItemUpdateView(AppUpdateView):
+    """Edição de dados cadastrais de um item existente."""
     model = InventoryItem
     form_class = InventoryItemForm
     page_title = "Editar Item"
@@ -388,6 +443,7 @@ class InventoryItemUpdateView(AppUpdateView):
 
 
 class InventoryItemDeleteView(AppDeleteView):
+    """Confirmação e exclusão definitiva de um item de estoque."""
     model = InventoryItem
     page_title = "Excluir Item de Estoque"
     page_description = "Tem certeza que deseja remover este item de estoque do sistema?"
@@ -402,6 +458,7 @@ class InventoryItemDeleteView(AppDeleteView):
 
 
 class InventoryItemDetailView(AppDetailView):
+    """Exibição detalhada de um item, especificações, valores, status e histórico de movimentações."""
     model = InventoryItem
     queryset = InventoryItem.objects.select_related("category", "branch", "assigned_employee").prefetch_related("movements")
     page_title = "Detalhes do Item"
@@ -409,7 +466,12 @@ class InventoryItemDetailView(AppDetailView):
     template_name = "inventory/item_detail.html"
 
 
+# ==============================================================================
+# OPERAÇÕES ESPECÍFICAS DE ESTOQUE (ADICIONAR, DEVOLVER, DESCARTAR)
+# ==============================================================================
+
 class InventoryItemAddStockView(AppFormPageView, FormView):
+    """Adiciona unidades de estoque diretamente a um item específico selecionado na tabela."""
     form_class = AddStockForm
     template_name = "shared/object_form.html"
     cancel_url_name = "inventory:item-list"
@@ -449,6 +511,7 @@ class InventoryItemAddStockView(AppFormPageView, FormView):
 
 
 class InventoryItemAssignView(AppFormPageView, FormView):
+    """Vincula uma unidade deste item específico a um colaborador, dando baixa no saldo geral."""
     form_class = AssignEmployeeForm
     template_name = "shared/object_form.html"
     cancel_url_name = "inventory:item-list"
@@ -479,7 +542,7 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                 )
                 return self.form_invalid(form)
 
-            # Unique serialized asset
+            # Item com serial/patrimônio
             if (source_item.serial_number or source_item.asset_tag) and source_item.quantity == 1:
                 source_item.assigned_employee = employee
                 source_item.status = InventoryStatus.IN_USE
@@ -497,7 +560,7 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                     notes=notes,
                 )
             else:
-                # Pool item: deduct quantity from pool, create/update assigned IN_USE item entry
+                # Item em lote
                 source_item.quantity -= quantity
                 source_item.save(update_fields=["quantity", "updated_at"])
 
@@ -568,6 +631,7 @@ class InventoryItemAssignView(AppFormPageView, FormView):
 
 
 class InventoryItemReturnStockView(AppFormPageView, FormView):
+    """Devolve unidades de um item que estava com colaborador de volta ao estoque geral."""
     form_class = ReturnStockForm
     template_name = "shared/object_form.html"
     cancel_url_name = "inventory:inventory-list"
@@ -600,7 +664,7 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
 
             emp_name = assigned_item.assigned_employee.full_name if assigned_item.assigned_employee else "Colaborador"
 
-            # Serialized asset single item
+            # Item individual serializado
             if (assigned_item.serial_number or assigned_item.asset_tag) and assigned_item.quantity == 1:
                 assigned_item.assigned_employee = None
                 assigned_item.status = InventoryStatus.IN_STOCK
@@ -616,7 +680,7 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
                     notes=notes,
                 )
             else:
-                # Pool item
+                # Item em lote: diminui a posse do colaborador e retorna ao pool geral
                 assigned_item.quantity -= quantity
                 if assigned_item.quantity <= 0:
                     assigned_item.delete()
@@ -664,6 +728,7 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
 
 
 class InventoryItemDiscardView(AppFormPageView, FormView):
+    """Registra a baixa / descarte definitivo de um equipamento por defeito, queima ou obsolescência."""
     form_class = DiscardEquipmentForm
     template_name = "shared/object_form.html"
     cancel_url_name = "inventory:item-list"
@@ -707,5 +772,6 @@ class InventoryItemDiscardView(AppFormPageView, FormView):
             f"O equipamento '{item.name}' foi marcado como Descartado com sucesso.",
         )
         return redirect("inventory:item-list")
+
 
 

@@ -5,6 +5,7 @@ from kanban.models import KanbanTask
 
 
 class KanbanTaskForm(StyledModelForm):
+    """Formulário para criação e edição de Cards/Tarefas no quadro Kanban."""
     class Meta:
         model = KanbanTask
         fields = [
@@ -23,3 +24,4 @@ class KanbanTaskForm(StyledModelForm):
             "description": forms.Textarea(attrs={"rows": 4}),
             "due_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         }
+

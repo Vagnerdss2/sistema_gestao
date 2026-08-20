@@ -13,7 +13,17 @@ from supportdesk.models import ServiceOrder
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
-    """Painel operacional com indicadores principais."""
+    """
+    View principal do Painel de Controle (Dashboard).
+    
+    Reúne e calcula as métricas operacionais consolidadas do sistema em tempo real:
+    - Estoque geral disponível e valor financeiro total dos itens.
+    - Quantidade de equipamentos atualmente em uso com colaboradores (Inventário).
+    - Alertas de itens com estoque no nível crítico ou abaixo do mínimo.
+    - Total de atendimentos/ordens de serviço executadas no mês atual agrupadas por filial e setor.
+    - Tarefas do quadro Kanban pendentes e atrasadas em relação ao prazo estipulado.
+    - Lista dos últimos atendimentos de suporte registrados para acompanhamento rápido.
+    """
 
     template_name = "core/dashboard.html"
 
@@ -21,10 +31,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         current_month = timezone.localdate().month
 
+        # Agregações de estoque e inventário
         inventory_totals = InventoryItem.objects.aggregate(
+            # Total de unidades físicas disponíveis no estoque (sem colaborador vinculado)
             total_in_stock=Sum("quantity", filter=Q(status=InventoryStatus.IN_STOCK, assigned_employee__isnull=True)),
+            # Total de unidades de equipamentos atualmente em uso por colaboradores
             total_in_use=Sum("quantity", filter=Q(assigned_employee__isnull=False) | Q(status=InventoryStatus.IN_USE)),
+            # Quantidade de itens que atingiram ou estão abaixo do estoque mínimo configurado
             low_stock=Count("id", filter=Q(assigned_employee__isnull=True, quantity__lte=models.F("minimum_quantity"))),
+            # Valor financeiro monetário total do estoque disponível (quantidade * preço unitário)
             stock_value=Sum(
                 F("quantity") * F("unit_price"),
                 filter=Q(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK),
@@ -32,6 +47,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             ),
         )
 
+        # Resumo de serviços do mês agrupados por Filial e Setor atendidos
         service_summary = (
             ServiceOrder.objects.filter(service_datetime__month=current_month)
             .values("branch__name", "department__name")
@@ -39,22 +55,28 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             .order_by("-total")[:8]
         )
 
+        # Total geral de atendimentos no mês atual
         total_services_month = ServiceOrder.objects.filter(service_datetime__month=current_month).count()
 
+        # Alimenta as variáveis que serão renderizadas no template do Dashboard
         context.update(
             {
                 "inventory_totals": inventory_totals,
                 "total_services_month": total_services_month,
+                # Tarefas com prazo vencido e que ainda não foram marcadas como concluídas
                 "overdue_tasks": KanbanTask.objects.filter(
                     due_date__lt=timezone.localdate(),
                 )
                 .exclude(status=TaskStatus.DONE)
                 .count(),
+                # Total de tarefas em andamento, a fazer ou aguardando
                 "open_tasks": KanbanTask.objects.exclude(status=TaskStatus.DONE).count(),
+                # Últimas 5 ordens de serviço registradas
                 "recent_service_orders": ServiceOrder.objects.select_related(
                     "attended_user", "branch", "department", "technician"
                 )[:5],
                 "service_summary": service_summary,
+                # Itens de estoque que necessitam de reposição imediata
                 "low_stock_items": InventoryItem.objects.filter(
                     assigned_employee__isnull=True,
                     quantity__lte=models.F("minimum_quantity"),
@@ -68,7 +90,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 class AppListView(LoginRequiredMixin, ListView):
-    """Lista padronizada para CRUDs do sistema."""
+    """
+    Classe base genérica para telas de listagem (Read/List) de entidades do sistema.
+    
+    Padroniza títulos, descrições e links de navegação para CRUDs (Criar, Editar, Detalhes, Excluir),
+    exigindo autenticação do usuário logado.
+    """
 
     template_name = "shared/object_list.html"
     context_object_name = "objects"
@@ -81,6 +108,7 @@ class AppListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Injeta as variáveis de cabeçalho e rotas no contexto do template compartilhado
         context.update(
             {
                 "page_title": self.page_title,
@@ -95,7 +123,11 @@ class AppListView(LoginRequiredMixin, ListView):
 
 
 class AppCreateView(LoginRequiredMixin, CreateView):
-    """Formulario padronizado para criacao."""
+    """
+    Classe base genérica para telas de criação de registros (Create).
+    
+    Padroniza título, botões de ação e cancelamento para os formulários de cadastro.
+    """
 
     template_name = "shared/object_form.html"
     page_title = ""
@@ -117,7 +149,11 @@ class AppCreateView(LoginRequiredMixin, CreateView):
 
 
 class AppUpdateView(LoginRequiredMixin, UpdateView):
-    """Formulario padronizado para edicao."""
+    """
+    Classe base genérica para telas de edição/atualização de registros (Update).
+    
+    Padroniza o título e o formulário de alteração de dados de qualquer entidade.
+    """
 
     template_name = "shared/object_form.html"
     page_title = ""
@@ -139,7 +175,11 @@ class AppUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class AppDeleteView(LoginRequiredMixin, DeleteView):
-    """Tela padrao para confirmacao de exclusao."""
+    """
+    Classe base genérica para telas de confirmação de exclusão (Delete).
+    
+    Exibe um modal/página de confirmação antes de remover definitivamente um registro do banco.
+    """
 
     template_name = "shared/object_confirm_delete.html"
     page_title = "Excluir Registro"
@@ -161,7 +201,11 @@ class AppDeleteView(LoginRequiredMixin, DeleteView):
 
 
 class AppDetailView(LoginRequiredMixin, DetailView):
-    """Tela padrao de detalhamento."""
+    """
+    Classe base genérica para telas de visualização detalhada (Read/Detail).
+    
+    Apresenta todos os atributos e relacionamentos de uma única entidade selecionada.
+    """
 
     template_name = "shared/object_detail.html"
     page_title = ""
@@ -179,7 +223,11 @@ class AppDetailView(LoginRequiredMixin, DetailView):
 
 
 class AppFormPageView(LoginRequiredMixin, TemplateView):
-    """Pagina autenticada para formularios compostos por formsets."""
+    """
+    Classe base para páginas de formulários customizados ou compostos (FormView/Formsets).
+    
+    Fornece autenticação obrigatória e variáveis de contexto padronizadas para formulários operacionais.
+    """
 
     page_title = ""
     page_description = ""
@@ -198,3 +246,4 @@ class AppFormPageView(LoginRequiredMixin, TemplateView):
         )
         context.update(kwargs)
         return context
+

@@ -12,7 +12,12 @@ from organization.forms import (
 from organization.models import Branch, Department, Employee, EquipmentCategory, Supplier
 
 
+# ==============================================================================
+# GESTÃO DE FILIAIS (BRANCHES)
+# ==============================================================================
+
 class BranchListView(AppListView):
+    """Listagem de todas as filiais cadastradas na organização."""
     model = Branch
     page_title = "Filiais"
     page_description = "Cadastre e consulte as filiais atendidas pela operacao."
@@ -21,6 +26,7 @@ class BranchListView(AppListView):
 
 
 class BranchCreateView(AppCreateView):
+    """Cadastro de nova filial (ex: código, nome, cidade e UF)."""
     model = Branch
     form_class = BranchForm
     page_title = "Nova Filial"
@@ -30,6 +36,7 @@ class BranchCreateView(AppCreateView):
 
 
 class BranchUpdateView(AppUpdateView):
+    """Edição de informações de filial existente."""
     model = Branch
     form_class = BranchForm
     page_title = "Editar Filial"
@@ -38,7 +45,12 @@ class BranchUpdateView(AppUpdateView):
     success_url = reverse_lazy("organization:branch-list")
 
 
+# ==============================================================================
+# GESTÃO DE SETORES / DEPARTAMENTOS
+# ==============================================================================
+
 class DepartmentListView(AppListView):
+    """Listagem de setores com pré-carregamento das filiais vinculadas (prefetch_related)."""
     model = Department
     queryset = Department.objects.prefetch_related("branches")
     template_name = "organization/department_list.html"
@@ -49,6 +61,7 @@ class DepartmentListView(AppListView):
 
 
 class DepartmentCreateView(AppCreateView):
+    """Cadastro de novo setor e seleção de filiais em que opera."""
     model = Department
     form_class = DepartmentForm
     template_name = "organization/department_form.html"
@@ -59,6 +72,7 @@ class DepartmentCreateView(AppCreateView):
 
 
 class DepartmentUpdateView(AppUpdateView):
+    """Edição de setor existente."""
     model = Department
     form_class = DepartmentForm
     template_name = "organization/department_form.html"
@@ -68,7 +82,12 @@ class DepartmentUpdateView(AppUpdateView):
     success_url = reverse_lazy("organization:department-list")
 
 
+# ==============================================================================
+# GESTÃO DE COLABORADORES (EMPLOYEES)
+# ==============================================================================
+
 class EmployeeListView(AppListView):
+    """Listagem de colaboradores com otimização select_related em setor e filial."""
     model = Employee
     queryset = Employee.objects.select_related("department", "branch")
     page_title = "Colaboradores"
@@ -78,6 +97,7 @@ class EmployeeListView(AppListView):
 
 
 class EmployeeCreateView(AppCreateView):
+    """Cadastro de novo colaborador."""
     model = Employee
     form_class = EmployeeForm
     page_title = "Novo Colaborador"
@@ -87,6 +107,7 @@ class EmployeeCreateView(AppCreateView):
 
 
 class EmployeeUpdateView(AppUpdateView):
+    """Edição de dados cadastrais de colaborador."""
     model = Employee
     form_class = EmployeeForm
     page_title = "Editar Colaborador"
@@ -95,7 +116,12 @@ class EmployeeUpdateView(AppUpdateView):
     success_url = reverse_lazy("organization:employee-list")
 
 
+# ==============================================================================
+# GESTÃO DE FORNECEDORES (SUPPLIERS)
+# ==============================================================================
+
 class SupplierListView(AppListView):
+    """Listagem de fornecedores e prestadores cadastrados."""
     model = Supplier
     page_title = "Fornecedores"
     page_description = "Fornecedores habilitados para compras de TI."
@@ -104,6 +130,7 @@ class SupplierListView(AppListView):
 
 
 class SupplierCreateView(AppCreateView):
+    """Cadastro de novo fornecedor."""
     model = Supplier
     form_class = SupplierForm
     page_title = "Novo Fornecedor"
@@ -113,6 +140,7 @@ class SupplierCreateView(AppCreateView):
 
 
 class SupplierUpdateView(AppUpdateView):
+    """Edição de dados de fornecedor."""
     model = Supplier
     form_class = SupplierForm
     page_title = "Editar Fornecedor"
@@ -121,7 +149,12 @@ class SupplierUpdateView(AppUpdateView):
     success_url = reverse_lazy("organization:supplier-list")
 
 
+# ==============================================================================
+# GESTÃO DE CATEGORIAS DE EQUIPAMENTOS
+# ==============================================================================
+
 class CategoryListView(AppListView):
+    """Listagem de categorias de itens de TI."""
     model = EquipmentCategory
     page_title = "Categorias"
     page_description = "Categorias que organizam equipamentos, pecas e licencas."
@@ -130,6 +163,7 @@ class CategoryListView(AppListView):
 
 
 class CategoryCreateView(AppCreateView):
+    """Cadastro de nova categoria."""
     model = EquipmentCategory
     form_class = EquipmentCategoryForm
     page_title = "Nova Categoria"
@@ -139,6 +173,7 @@ class CategoryCreateView(AppCreateView):
 
 
 class CategoryUpdateView(AppUpdateView):
+    """Edição de categoria de equipamento."""
     model = EquipmentCategory
     form_class = EquipmentCategoryForm
     page_title = "Editar Categoria"
@@ -147,9 +182,17 @@ class CategoryUpdateView(AppUpdateView):
     success_url = reverse_lazy("organization:category-list")
 
 
-def employee_metadata(request, pk: int):
-    """Retorna setor e filial do colaborador para preenchimento dinamico."""
+# ==============================================================================
+# API JSON AUXILIAR
+# ==============================================================================
 
+def employee_metadata(request, pk: int):
+    """
+    Endpoint JSON que retorna os dados de setor e filial de um colaborador selecionado.
+    
+    Utilizado por scripts JavaScript no frontend para autopreencher a filial e o setor
+    ao selecionar um colaborador nas telas de Abertura de Ordem de Serviço ou Atribuição.
+    """
     employee = Employee.objects.select_related("department", "branch").get(pk=pk)
     return JsonResponse(
         {
@@ -159,3 +202,4 @@ def employee_metadata(request, pk: int):
             "branch_name": employee.branch.name,
         }
     )
+

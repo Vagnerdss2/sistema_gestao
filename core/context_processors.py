@@ -1,5 +1,10 @@
 def navigation(_request):
-    """Itens de navegacao principais compartilhados pelo layout."""
+    """
+    Context Processor global que injeta os itens do menu lateral em todos os templates.
+    
+    Permite que o layout principal (base.html) construa a barra de navegação de forma
+    centralizada e dinâmica, sem necessidade de repetição de código nas views.
+    """
 
     return {
         "navigation_items": [
@@ -15,3 +20,4 @@ def navigation(_request):
             {"label": "Kanban", "url_name": "kanban:board"},
         ]
     }
+

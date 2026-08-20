@@ -6,6 +6,12 @@ from organization.models import Employee
 
 
 class InventoryItemForm(StyledModelForm):
+    """
+    Formulário para cadastro completo de um novo item no catálogo de inventário ou edição de item.
+    
+    Permite especificar metadados detalhados (marca, modelo, serial, patrimônio,
+    data de aquisição, valor unitário em R$, filial e estoque mínimo).
+    """
     class Meta:
         model = InventoryItem
         fields = [
@@ -48,6 +54,11 @@ class InventoryItemForm(StyledModelForm):
 
 
 class AddStockForm(StyledForm):
+    """
+    Formulário para adicionar novas unidades de estoque a um item específico existente.
+    
+    Permite atualizar o valor unitário, registrar data de aquisição e referência de Nota Fiscal.
+    """
     quantity = forms.IntegerField(
         label="Quantidade a Adicionar",
         min_value=1,
@@ -82,7 +93,12 @@ class AddStockForm(StyledForm):
 
 
 class QuickStockEntryForm(StyledForm):
-    """Permite dar entrada de estoque selecionando um item já cadastrado."""
+    """
+    Formulário para Entrada Rápida de Estoque (Reutilização de Cadastro).
+    
+    Permite reabastecer o estoque selecionando um produto já registrado no catálogo
+    a partir de um dropdown, sem a necessidade de redigitar marca, modelo ou categoria.
+    """
 
     item = forms.ModelChoiceField(
         queryset=InventoryItem.objects.filter(assigned_employee__isnull=True).exclude(status=InventoryStatus.DISCARDED).order_by("name", "brand", "model"),
@@ -124,6 +140,11 @@ class QuickStockEntryForm(StyledForm):
 
 
 class AssignEmployeeForm(StyledForm):
+    """
+    Formulário para entrega / vinculação de equipamento do estoque a um colaborador.
+    
+    Deduz a quantidade do saldo disponível e cria o registro de Inventário em uso.
+    """
     item = forms.ModelChoiceField(
         queryset=InventoryItem.objects.filter(assigned_employee__isnull=True, quantity__gt=0).exclude(status=InventoryStatus.DISCARDED).order_by("name", "brand", "model"),
         label="Item Disponível em Estoque",
@@ -151,6 +172,9 @@ class AssignEmployeeForm(StyledForm):
 
 
 class ReturnStockForm(StyledForm):
+    """
+    Formulário para devolução de itens em uso por colaboradores de volta ao estoque geral.
+    """
     quantity = forms.IntegerField(
         label="Quantidade a devolver",
         min_value=1,
@@ -165,6 +189,9 @@ class ReturnStockForm(StyledForm):
 
 
 class DiscardEquipmentForm(StyledForm):
+    """
+    Formulário para baixa / descarte de equipamento com justificativa ou laudo técnico.
+    """
     reason = forms.CharField(
         label="Motivo do Descarte / Laudo Técnico",
         required=True,
@@ -176,4 +203,5 @@ class DiscardEquipmentForm(StyledForm):
         ),
         help_text="Informe o motivo técnico ou operacional para descartar este equipamento.",
     )
+
 

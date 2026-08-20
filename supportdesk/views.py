@@ -8,6 +8,11 @@ from supportdesk.services import process_service_item_usages
 
 
 class ServiceOrderListView(AppListView):
+    """
+    Listagem de todas as Ordens de Serviço e Atendimentos de TI registrados no sistema.
+    
+    Carrega previamente os relacionamentos com usuário atendido, departamento, filial e técnico.
+    """
     model = ServiceOrder
     queryset = ServiceOrder.objects.select_related(
         "attended_user", "department", "branch", "technician"
@@ -20,6 +25,14 @@ class ServiceOrderListView(AppListView):
 
 
 class ServiceOrderCreateView(AppFormPageView):
+    """
+    Criação de nova Ordem de Serviço com suporte a múltiplos itens/peças (Formset).
+    
+    Ao submeter com sucesso:
+    1. Salva a OS no banco.
+    2. Salva os itens/peças associados no formset.
+    3. Executa a baixa automática de estoque para insumos consumidos via process_service_item_usages.
+    """
     template_name = "supportdesk/service_form.html"
     page_title = "Nova Ordem de Servico"
     page_description = "Registre o atendimento e os itens envolvidos."
@@ -44,6 +57,9 @@ class ServiceOrderCreateView(AppFormPageView):
 
 
 class ServiceOrderUpdateView(ServiceOrderCreateView):
+    """
+    Edição de uma Ordem de Serviço existente e seus respectivos itens utilizados.
+    """
     page_title = "Editar Ordem de Servico"
     page_description = "Atualize o atendimento e os itens vinculados."
 
@@ -72,6 +88,9 @@ class ServiceOrderUpdateView(ServiceOrderCreateView):
 
 
 class ServiceOrderDetailView(AppDetailView):
+    """
+    Detalhamento completo de uma Ordem de Serviço, diagnóstico, solução aplicada e peças utilizadas.
+    """
     model = ServiceOrder
     queryset = ServiceOrder.objects.select_related(
         "attended_user", "department", "branch", "technician"
@@ -79,3 +98,4 @@ class ServiceOrderDetailView(AppDetailView):
     page_title = "Detalhes do Servico"
     list_url_name = "supportdesk:service-list"
     template_name = "supportdesk/service_detail.html"
+

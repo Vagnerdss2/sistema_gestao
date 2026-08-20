@@ -4,6 +4,13 @@ from core.models import TimeStampedModel
 
 
 class TaskPriority(models.TextChoices):
+    """
+    Níveis de prioridade para tarefas no quadro Kanban:
+    - LOW: Baixa prioridade / Sem urgência imediata.
+    - MEDIUM: Prioridade média / Padrão operacional.
+    - HIGH: Alta prioridade / Atenção requerida.
+    - URGENT: Urgente / Ação prioritária imediata.
+    """
     LOW = "low", "Baixa"
     MEDIUM = "medium", "Media"
     HIGH = "high", "Alta"
@@ -11,6 +18,13 @@ class TaskPriority(models.TextChoices):
 
 
 class TaskStatus(models.TextChoices):
+    """
+    Colunas de status do fluxo de trabalho no quadro visual Kanban:
+    - TODO: A Fazer / Backlog de pendências.
+    - IN_PROGRESS: Em Andamento / Sendo executada no momento.
+    - WAITING: Pendente / Aguardando terceiro, peça ou aprovação.
+    - DONE: Concluído / Finalizada com sucesso.
+    """
     TODO = "todo", "A Fazer"
     IN_PROGRESS = "in_progress", "Em Andamento"
     WAITING = "waiting", "Pendente / Aguardando"
@@ -18,7 +32,12 @@ class TaskStatus(models.TextChoices):
 
 
 class KanbanTask(TimeStampedModel):
-    """Card do quadro Kanban operacional."""
+    """
+    Representa um Card / Tarefa no quadro Kanban de TI.
+    
+    Permite controle ágil de atividades, prazos de entrega, técnico responsável,
+    filial/setor de impacto e vínculos com Ordens de Serviço ou Compras.
+    """
 
     title = models.CharField("titulo", max_length=160)
     description = models.TextField("descricao detalhada")
@@ -84,3 +103,4 @@ class KanbanTask(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.title
+

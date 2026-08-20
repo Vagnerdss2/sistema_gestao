@@ -5,7 +5,15 @@ from core.models import TimeStampedModel
 
 
 class Branch(TimeStampedModel):
-    """Representa uma filial da operacao."""
+    """
+    Representa uma Unidade / Filial física da empresa.
+    
+    Campos:
+    - name: Nome descritivo da filial (ex: Matriz São Paulo, Fábrica Curitiba).
+    - code: Código identificador único (ex: SP01, PR02).
+    - city: Cidade onde a filial está instalada.
+    - state: Unidade Federativa / Estado (UF com 2 letras, ex: SP, PR).
+    """
 
     name = models.CharField("nome", max_length=120)
     code = models.CharField("codigo", max_length=20, unique=True)
@@ -22,9 +30,14 @@ class Branch(TimeStampedModel):
 
 
 class Department(TimeStampedModel):
-    """Setor que pode ser compartilhado entre varias filiais."""
+    """
+    Representa um Setor / Departamento organizacional da empresa (ex: TI, Financeiro, RH).
+    
+    Um setor possui nome único e pode operar em uma ou múltiplas filiais (relação Many-to-Many).
+    """
 
     name = models.CharField("nome", max_length=120)
+    # Filiais em que este departamento está ativo e autorizado a operar
     branches = models.ManyToManyField(
         Branch,
         related_name="departments",
@@ -41,6 +54,7 @@ class Department(TimeStampedModel):
 
     @property
     def branches_display(self) -> str:
+        """Retorna uma string com os códigos das filiais vinculadas separados por vírgula."""
         return ", ".join(self.branches.order_by("code").values_list("code", flat=True))
 
     def __str__(self) -> str:
@@ -48,7 +62,14 @@ class Department(TimeStampedModel):
 
 
 class Employee(TimeStampedModel):
-    """Colaborador usado como solicitante, atendido e responsavel."""
+    """
+    Representa um Colaborador / Funcionário da empresa.
+    
+    Usado no sistema como:
+    - Solicitante ou atendido em Ordens de Serviço (Support Desk).
+    - Responsável / possuidor de equipamentos alocados (Inventário).
+    - Responsável por tarefas no Kanban.
+    """
 
     full_name = models.CharField("nome completo", max_length=150)
     email = models.EmailField("e-mail", blank=True, null=True)
@@ -72,6 +93,7 @@ class Employee(TimeStampedModel):
         verbose_name = "colaborador"
         verbose_name_plural = "colaboradores"
         constraints = [
+            # Garante unicidade de e-mail apenas para colaboradores que possuem e-mail preenchido
             models.UniqueConstraint(
                 fields=("email",),
                 condition=~models.Q(email=None) & ~models.Q(email=""),
@@ -80,6 +102,11 @@ class Employee(TimeStampedModel):
         ]
 
     def clean(self) -> None:
+        """
+        Validações de integridade de regras de negócio:
+        1. Se e-mail for string vazia, converte para None para evitar conflito de unicidade.
+        2. Garante que a filial selecionada para o colaborador seja uma das filiais permitidas para o seu setor.
+        """
         if self.email == "":
             self.email = None
         if self.email:
@@ -100,6 +127,7 @@ class Employee(TimeStampedModel):
             )
 
     def save(self, *args, **kwargs):
+        # Normaliza e-mail vazio para None antes de persistir no banco
         if self.email == "":
             self.email = None
         return super().save(*args, **kwargs)
@@ -109,7 +137,9 @@ class Employee(TimeStampedModel):
 
 
 class Supplier(TimeStampedModel):
-    """Fornecedor de equipamentos e servicos."""
+    """
+    Representa um Fornecedor parceiro (hardware, software, serviços, infraestrutura).
+    """
 
     legal_name = models.CharField("razao social", max_length=150)
     cnpj = models.CharField("CNPJ", max_length=18, unique=True)
@@ -127,7 +157,9 @@ class Supplier(TimeStampedModel):
 
 
 class EquipmentCategory(TimeStampedModel):
-    """Categoria base para classificacao dos itens."""
+    """
+    Categoria / Classificação dos itens de TI (ex: Notebooks, Desktops, Monitores, Periféricos, Redes).
+    """
 
     name = models.CharField("nome", max_length=100, unique=True)
     description = models.TextField("descricao", blank=True)
@@ -139,3 +171,4 @@ class EquipmentCategory(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+

@@ -6,6 +6,7 @@ from supportdesk.models import ServiceOrder, ServiceOrderItemUsage
 
 
 class ServiceOrderForm(StyledModelForm):
+    """Formulário principal para registro e atualização de Ordens de Serviço de TI."""
     class Meta:
         model = ServiceOrder
         fields = [
@@ -26,11 +27,13 @@ class ServiceOrderForm(StyledModelForm):
 
 
 class ServiceOrderItemUsageForm(StyledModelForm):
+    """Formulário individual para cada linha de item/peça utilizada no atendimento."""
     class Meta:
         model = ServiceOrderItemUsage
         fields = ["item", "usage_type", "quantity"]
 
 
+# Formset dinâmico que permite associar múltiplos itens/peças a uma única Ordem de Serviço
 ServiceOrderItemUsageFormSet = inlineformset_factory(
     ServiceOrder,
     ServiceOrderItemUsage,
@@ -38,3 +41,4 @@ ServiceOrderItemUsageFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+

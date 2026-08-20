@@ -5,18 +5,34 @@ from core.models import TimeStampedModel
 
 
 class ServiceStatus(models.TextChoices):
+    """
+    Enumeração dos status de uma Ordem de Serviço / Atendimento Técnico:
+    - OPEN: Aberto / Aguardando início do atendimento.
+    - IN_PROGRESS: Em atendimento / análise pelo técnico de TI.
+    - DONE: Concluído / Solução aplicada com sucesso.
+    """
     OPEN = "open", "Aberto"
     IN_PROGRESS = "in_progress", "Em Atendimento"
     DONE = "done", "Concluido"
 
 
 class ServiceItemUsageType(models.TextChoices):
+    """
+    Classificação do uso de itens em um atendimento:
+    - EQUIPMENT: Equipamento que recebeu manutenção/suporte (não consome estoque).
+    - PART: Peça, cabo ou insumo consumido/substituído (dá baixa no estoque).
+    """
     EQUIPMENT = "equipment", "Equipamento Envolvido"
     PART = "part", "Peca/Item Consumido"
 
 
 class ServiceOrder(TimeStampedModel):
-    """Registro de suporte ou manutencao executada."""
+    """
+    Representa uma Ordem de Serviço / Atendimento de Suporte de TI.
+    
+    Registra data, horário, usuário solicitante/atendido, setor, filial,
+    técnico executor, descrição do chamado, solução técnica aplicada e status.
+    """
 
     title = models.CharField("titulo", max_length=160)
     short_description = models.CharField("descricao curta", max_length=255)
@@ -59,6 +75,7 @@ class ServiceOrder(TimeStampedModel):
         verbose_name_plural = "ordens de servico"
 
     def clean(self) -> None:
+        """Valida se filial e setor coincidem com os dados cadastrais do colaborador atendido."""
         if self.attended_user_id and self.department_id:
             if self.attended_user.department_id != self.department_id:
                 raise ValidationError({"department": "O setor deve corresponder ao usuario atendido."})
@@ -73,6 +90,7 @@ class ServiceOrder(TimeStampedModel):
             raise ValidationError({"branch": "A filial precisa estar habilitada para o setor informado."})
 
     def save(self, *args, **kwargs):
+        """Autopreencha setor e filial a partir do colaborador atendido se omitidos."""
         if self.attended_user_id and not self.department_id:
             self.department = self.attended_user.department
         if self.attended_user_id and not self.branch_id:
@@ -85,7 +103,11 @@ class ServiceOrder(TimeStampedModel):
 
 
 class ServiceOrderItemUsage(TimeStampedModel):
-    """Itens envolvidos ou consumidos durante o atendimento."""
+    """
+    Itens e insumos associados à Ordem de Serviço.
+    
+    Se o tipo for 'PART', o serviço do sistema dará baixa automática nas unidades do estoque.
+    """
 
     service_order = models.ForeignKey(
         ServiceOrder,
@@ -118,3 +140,4 @@ class ServiceOrderItemUsage(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.service_order.title} - {self.item.name}"
+
