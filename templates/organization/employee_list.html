@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Gestão de TI{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_description %}{{ page_description }}{% endblock %}
+
+{% block content %}
+    <!-- Cards de Métricas Consolidadas -->
+    <div class="mb-6 grid gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total de Colaboradores</span>
+                <span class="rounded-lg bg-blue-50 p-2 text-blue-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-bold text-slate-900">{{ total_employees }}</span>
+                <span class="text-xs text-slate-500">cadastrados</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Colaboradores Ativos</span>
+                <span class="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-bold text-emerald-600">{{ active_employees }}</span>
+                <span class="text-xs text-slate-500">em atividade</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Inativos / Desligados</span>
+                <span class="rounded-lg bg-slate-100 p-2 text-slate-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-bold text-slate-700">{{ inactive_employees }}</span>
+                <span class="text-xs text-slate-500">inativos</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Ações e Filtros -->
+    <div class="mb-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <form method="get" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <!-- Busca Geral -->
+            <div class="lg:col-span-2">
+                <label for="id_q" class="mb-1 block text-xs font-medium text-slate-600">Buscar por Código, Nome, Cargo ou E-mail</label>
+                <div class="relative">
+                    <input type="text" name="q" id="id_q" value="{{ q }}" placeholder="Ex: 1, Carlos, Analista..."
+                           class="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-slate-900 focus:outline-none">
+                    <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+
+            <!-- Filtro por Filial -->
+            <div>
+                <label for="id_branch" class="mb-1 block text-xs font-medium text-slate-600">Filial</label>
+                <select name="branch" id="id_branch" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none">
+                    <option value="">Todas as Filiais</option>
+                    {% for b in branches %}
+                        <option value="{{ b.id }}" {% if selected_branch == b.id|stringformat:"s" %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtro por Setor -->
+            <div>
+                <label for="id_department" class="mb-1 block text-xs font-medium text-slate-600">Setor</label>
+                <select name="department" id="id_department" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none">
+                    <option value="">Todos os Setores</option>
+                    {% for d in departments %}
+                        <option value="{{ d.id }}" {% if selected_department == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Botões de Ação do Filtro -->
+            <div class="flex items-end gap-2">
+                <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                    Filtrar
+                </button>
+                {% if q or selected_branch or selected_department or selected_status %}
+                    <a href="{% url 'organization:employee-list' %}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition" title="Limpar Filtros">
+                        Limpar
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Cabeçalho com Contador e Botão de Cadastro -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm font-medium text-slate-600">
+            Exibindo <span class="font-bold text-slate-900">{{ objects|length }}</span> colaborador(es) encontrado(s).
+        </p>
+        <a href="{% url create_url_name %}" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Novo Colaborador
+        </a>
+    </div>
+
+    <!-- Tabela Responsiva de Colaboradores -->
+    <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-sm text-slate-600">
+                <thead class="border-b border-slate-200/80 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <tr>
+                        <th class="px-5 py-3.5 text-center">Código</th>
+                        <th class="px-5 py-3.5">Colaborador / Nome</th>
+                        <th class="px-5 py-3.5">Cargo</th>
+                        <th class="px-5 py-3.5">Setor</th>
+                        <th class="px-5 py-3.5">Filial</th>
+                        <th class="px-5 py-3.5">E-mail</th>
+                        <th class="px-5 py-3.5 text-center">Status</th>
+                        <th class="px-5 py-3.5 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for object in objects %}
+                        <tr class="hover:bg-slate-50/60 transition">
+                            <!-- Código do Colaborador -->
+                            <td class="whitespace-nowrap px-5 py-3.5 text-center font-mono font-bold text-slate-900">
+                                <span class="inline-flex items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200">
+                                    #{{ object.code|default:object.pk }}
+                                </span>
+                            </td>
+
+                            <!-- Nome -->
+                            <td class="whitespace-nowrap px-5 py-3.5 font-medium text-slate-900">
+                                {{ object.full_name }}
+                            </td>
+
+                            <!-- Cargo -->
+                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-600">
+                                {{ object.job_title }}
+                            </td>
+
+                            <!-- Setor -->
+                            <td class="whitespace-nowrap px-5 py-3.5">
+                                <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                                    {{ object.department.name }}
+                                </span>
+                            </td>
+
+                            <!-- Filial -->
+                            <td class="whitespace-nowrap px-5 py-3.5">
+                                <span class="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-800 border border-sky-200/60">
+                                    {{ object.branch.code }} - {{ object.branch.city }}
+                                </span>
+                            </td>
+
+                            <!-- E-mail -->
+                            <td class="whitespace-nowrap px-5 py-3.5 text-xs text-slate-500">
+                                {% if object.email %}
+                                    <a href="mailto:{{ object.email }}" class="text-blue-600 hover:underline">{{ object.email }}</a>
+                                {% else %}
+                                    <span class="text-slate-400 italic">Não informado</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Status -->
+                            <td class="whitespace-nowrap px-5 py-3.5 text-center">
+                                {% if object.is_active %}
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span> Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Ações -->
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                                <a href="{% url update_url_name object.pk %}" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <p class="text-base font-semibold text-slate-700">Nenhum colaborador encontrado</p>
+                                <p class="text-xs text-slate-500 mt-1">Cadastre um novo colaborador ou altere os termos da busca.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

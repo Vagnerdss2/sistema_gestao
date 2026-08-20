@@ -79,7 +79,7 @@
                 >
                     <option value="">Todos os colaboradores</option>
                     {% for emp in employees %}
-                        <option value="{{ emp.pk }}" {% if selected_colaborador == emp.pk|stringformat:"s" %}selected{% endif %}>{{ emp.full_name }}</option>
+                        <option value="{{ emp.pk }}" {% if selected_colaborador == emp.pk|stringformat:"s" %}selected{% endif %}>#{% if emp.code %}{{ emp.code }}{% else %}{{ emp.pk }}{% endif %} - {{ emp.full_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -164,7 +164,12 @@
                         <tr class="hover:bg-slate-50/80 transition">
                             <td class="px-5 py-4">
                                 <div class="flex flex-col">
-                                    <span class="font-bold text-slate-900">{{ object.assigned_employee.full_name }}</span>
+                                    <div class="flex items-center gap-1.5">
+                                        {% if object.assigned_employee.code %}
+                                            <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-700 border border-slate-200">#{{ object.assigned_employee.code }}</span>
+                                        {% endif %}
+                                        <span class="font-bold text-slate-900">{{ object.assigned_employee.full_name }}</span>
+                                    </div>
                                     <span class="text-xs text-slate-500">{{ object.assigned_employee.job_title }}</span>
                                     {% if object.assigned_employee.email %}
                                         <span class="text-[11px] text-slate-400">{{ object.assigned_employee.email }}</span>

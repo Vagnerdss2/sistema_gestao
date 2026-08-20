@@ -22,18 +22,22 @@ class DepartmentForm(StyledModelForm):
 
 
 class EmployeeForm(StyledModelForm):
-    """Formulário para cadastro e edição de Colaboradores, permitindo e-mail opcional."""
+    """Formulário para cadastro e edição de Colaboradores, com código sequencial automático e e-mail opcional."""
     class Meta:
         model = Employee
-        fields = ["full_name", "email", "job_title", "department", "branch", "is_active"]
+        fields = ["code", "full_name", "email", "job_title", "department", "branch", "is_active"]
         help_texts = {
+            "code": "Deixe em branco para gerar automaticamente o próximo código sequencial.",
             "email": "Campo opcional.",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Garante que o campo de e-mail seja opcional no formulário
+        # Código e e-mail são opcionais na inserção (código é autogerado se omitido)
+        self.fields["code"].required = False
         self.fields["email"].required = False
+        if not self.instance.pk:
+            self.fields["code"].widget.attrs["placeholder"] = "Automático (Próximo sequencial)"
 
     def clean_email(self):
         """Trata e-mail vazio convertendo para None para não violar a restrição de unicidade."""
@@ -41,6 +45,7 @@ class EmployeeForm(StyledModelForm):
         if not email or not str(email).strip():
             return None
         return str(email).strip()
+
 
 
 class SupplierForm(StyledModelForm):

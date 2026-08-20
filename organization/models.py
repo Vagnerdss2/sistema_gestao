@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 
 from core.models import TimeStampedModel
 
@@ -65,12 +65,23 @@ class Employee(TimeStampedModel):
     """
     Representa um Colaborador / Funcionário da empresa.
     
-    Usado no sistema como:
-    - Solicitante ou atendido em Ordens de Serviço (Support Desk).
-    - Responsável / possuidor de equipamentos alocados (Inventário).
-    - Responsável por tarefas no Kanban.
+    Campos:
+    - code: Código numérico identificador único gerado automaticamente a partir de 1.
+    - full_name: Nome completo do colaborador.
+    - email: Endereço de e-mail (opcional).
+    - job_title: Cargo / Função desempenhada.
+    - department: Setor de lotação.
+    - branch: Filial de atuação.
+    - is_active: Indicador se o colaborador está ativo na empresa.
     """
 
+    code = models.PositiveIntegerField(
+        "código",
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Código identificador único sequencial gerado automaticamente a partir do número 1.",
+    )
     full_name = models.CharField("nome completo", max_length=150)
     email = models.EmailField("e-mail", blank=True, null=True)
     job_title = models.CharField("cargo", max_length=120)
@@ -89,7 +100,7 @@ class Employee(TimeStampedModel):
     is_active = models.BooleanField("ativo", default=True)
 
     class Meta:
-        ordering = ("full_name",)
+        ordering = ("code", "full_name")
         verbose_name = "colaborador"
         verbose_name_plural = "colaboradores"
         constraints = [
@@ -106,6 +117,7 @@ class Employee(TimeStampedModel):
         Validações de integridade de regras de negócio:
         1. Se e-mail for string vazia, converte para None para evitar conflito de unicidade.
         2. Garante que a filial selecionada para o colaborador seja uma das filiais permitidas para o seu setor.
+        3. Evita duplicidade de colaborador com mesmo nome na mesma filial e setor.
         """
         if self.email == "":
             self.email = None
@@ -125,15 +137,39 @@ class Employee(TimeStampedModel):
             raise ValidationError(
                 {"branch": "A filial precisa estar entre as filiais permitidas para o setor selecionado."}
             )
+        if self.full_name and self.branch_id and self.department_id:
+            duplicate_qs = Employee.objects.filter(
+                full_name__iexact=self.full_name.strip(),
+                branch_id=self.branch_id,
+                department_id=self.department_id,
+            )
+            if self.pk:
+                duplicate_qs = duplicate_qs.exclude(pk=self.pk)
+            if duplicate_qs.exists():
+                existing = duplicate_qs.first()
+                code_info = f" (Código: #{existing.code})" if existing.code else ""
+                raise ValidationError(
+                    {"full_name": f"Já existe um colaborador cadastrado com o nome '{self.full_name.strip()}' nesta filial e setor{code_info}."}
+                )
 
     def save(self, *args, **kwargs):
         # Normaliza e-mail vazio para None antes de persistir no banco
         if self.email == "":
             self.email = None
+
+        # Atribui automaticamente o código sequencial único a partir do número 1
+        if self.code is None:
+            with transaction.atomic():
+                max_code = Employee.objects.select_for_update().aggregate(models.Max("code"))["code__max"]
+                self.code = (max_code or 0) + 1
+
         return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
+        if self.code:
+            return f"#{self.code} - {self.full_name}"
         return self.full_name
+
 
 
 class Supplier(TimeStampedModel):

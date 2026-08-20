@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 
@@ -87,27 +88,73 @@ class DepartmentUpdateView(AppUpdateView):
 # ==============================================================================
 
 class EmployeeListView(AppListView):
-    """Listagem de colaboradores com otimização select_related em setor e filial."""
+    """
+    Listagem completa de colaboradores cadastrados na organização.
+    
+    Exibe o código único identificador sequencial (#1, #2...), nome completo, cargo, setor, filial e e-mail,
+    com suporte a filtros por texto de busca, filial, setor e status de atividade.
+    """
     model = Employee
-    queryset = Employee.objects.select_related("department", "branch")
+    template_name = "organization/employee_list.html"
     page_title = "Colaboradores"
-    page_description = "Colaboradores usados como usuarios atendidos e responsaveis."
+    page_description = "Colaboradores cadastrados com código único identificador, setor e filial."
     create_url_name = "organization:employee-create"
     update_url_name = "organization:employee-update"
 
+    def get_queryset(self):
+        qs = Employee.objects.select_related("department", "branch").order_by("code", "full_name")
+        q = self.request.GET.get("q", "").strip()
+        branch_id = self.request.GET.get("branch", "").strip()
+        department_id = self.request.GET.get("department", "").strip()
+        status = self.request.GET.get("status", "").strip()
+
+        if q:
+            if q.isdigit():
+                qs = qs.filter(Q(code=int(q)) | Q(full_name__icontains=q) | Q(job_title__icontains=q) | Q(email__icontains=q))
+            else:
+                qs = qs.filter(Q(full_name__icontains=q) | Q(job_title__icontains=q) | Q(email__icontains=q))
+
+        if branch_id and branch_id.isdigit():
+            qs = qs.filter(branch_id=int(branch_id))
+
+        if department_id and department_id.isdigit():
+            qs = qs.filter(department_id=int(department_id))
+
+        if status == "active":
+            qs = qs.filter(is_active=True)
+        elif status == "inactive":
+            qs = qs.filter(is_active=False)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        all_employees = Employee.objects.all()
+        context["total_employees"] = all_employees.count()
+        context["active_employees"] = all_employees.filter(is_active=True).count()
+        context["inactive_employees"] = all_employees.filter(is_active=False).count()
+        context["branches"] = Branch.objects.order_by("name")
+        context["departments"] = Department.objects.order_by("name")
+        context["q"] = self.request.GET.get("q", "").strip()
+        context["selected_branch"] = self.request.GET.get("branch", "").strip()
+        context["selected_department"] = self.request.GET.get("department", "").strip()
+        context["selected_status"] = self.request.GET.get("status", "").strip()
+        return context
+
 
 class EmployeeCreateView(AppCreateView):
-    """Cadastro de novo colaborador."""
+    """Cadastro de novo colaborador com geração automática de código sequencial."""
     model = Employee
     form_class = EmployeeForm
     page_title = "Novo Colaborador"
-    page_description = "Cadastre um colaborador."
+    page_description = "Cadastre um colaborador. Um código sequencial único será atribuído automaticamente."
     cancel_url_name = "organization:employee-list"
     success_url = reverse_lazy("organization:employee-list")
 
 
 class EmployeeUpdateView(AppUpdateView):
-    """Edição de dados cadastrais de colaborador."""
+    """Edição de dados cadastrais de colaborador existente."""
+
     model = Employee
     form_class = EmployeeForm
     page_title = "Editar Colaborador"
