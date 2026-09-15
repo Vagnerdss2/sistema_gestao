@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.conf import settings
 
 from core.models import TimeStampedModel
 
@@ -64,8 +65,9 @@ class Department(TimeStampedModel):
 class Employee(TimeStampedModel):
     """
     Representa um Colaborador / Funcionário da empresa.
-    
+
     Campos:
+    - user: Vínculo com a conta de acesso do sistema (Django User).
     - code: Código numérico identificador único gerado automaticamente a partir de 1.
     - full_name: Nome completo do colaborador.
     - email: Endereço de e-mail (opcional).
@@ -75,6 +77,14 @@ class Employee(TimeStampedModel):
     - is_active: Indicador se o colaborador está ativo na empresa.
     """
 
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="employee",
+        verbose_name="usuário de acesso",
+        null=True,
+        blank=True,
+    )
     code = models.PositiveIntegerField(
         "código",
         unique=True,

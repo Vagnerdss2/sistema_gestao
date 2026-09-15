@@ -24,9 +24,9 @@ urlpatterns = [
     # Rota raiz: Painel de Indicadores (Dashboard operacional)
     path("", DashboardView.as_view(), name="dashboard"),
 
-    # Autenticação de usuários com templates personalizados
-    path("login/", auth_views.LoginView.as_view(template_name="registration/login.html"), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    # Autenticação de usuários
+    path("accounts/", include("accounts.urls")),
+
 
     # Painel Administrativo padrão do Django
     path("admin/", admin.site.urls),

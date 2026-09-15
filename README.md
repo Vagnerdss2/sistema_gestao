@@ -22,11 +22,14 @@ Aplicacao web interna para controle operacional de TI com foco em:
 - `procurement`: ordens de compra com integracao automatica ao estoque
 - `supportdesk`: ordens de servico e baixa de itens consumidos
 - `kanban`: quadro de tarefas com drag and drop
+- `accounts`: gestao de autenticacao, login e registro de usuarios
 - `core`: dashboard e componentes compartilhados
 
 ## Regras de negocio implementadas
 
 - colaborador herda a filial do setor informado;
+- cada conta de acesso (User) e vinculada a um colaborador (Employee) via relacao One-to-One;
+- registro de novo usuario e colaborador ocorre de forma atomica (transacao);
 - servico associa setor/filial com base no usuario atendido;
 - compra marcada como `Entregue` integra os itens ao estoque automaticamente;
 - pecas consumidas em servicos geram baixa automatica no estoque;
