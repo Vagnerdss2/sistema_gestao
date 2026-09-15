@@ -8,19 +8,19 @@ class RegistrationForm(StyledForm):
     Formulário de cadastro de novo usuário e colaborador.
     Coleta dados de autenticação e dados profissionais básicos.
     """
-    full_name = forms.CharField("Nome Completo", max_length=150, widget=forms.TextInput(attrs={"placeholder": "Digite seu nome completo"}))
-    username = forms.CharField("Login", max_length=150, widget=forms.TextInput(attrs={"placeholder": "Escolha um nome de usuário"}))
-    email = forms.EmailField("E-mail", max_length=254, widget=forms.EmailInput(attrs={"placeholder": "exemplo@email.com"}))
-    password = forms.CharField("Senha", widget=forms.PasswordInput(attrs={"placeholder": "********"}))
-    password_confirm = forms.CharField("Confirmar Senha", widget=forms.PasswordInput(attrs={"placeholder": "********"}))
+    full_name = forms.CharField(label="Nome Completo", max_length=150, widget=forms.TextInput(attrs={"placeholder": "Digite seu nome completo"}))
+    username = forms.CharField(label="Login", max_length=150, widget=forms.TextInput(attrs={"placeholder": "Escolha um nome de usuário"}))
+    email = forms.EmailField(label="E-mail", max_length=254, widget=forms.EmailInput(attrs={"placeholder": "exemplo@email.com"}))
+    password = forms.CharField(label="Senha", widget=forms.PasswordInput(attrs={"placeholder": "********"}))
+    password_confirm = forms.CharField(label="Confirmar Senha", widget=forms.PasswordInput(attrs={"placeholder": "********"}))
 
     department = forms.ModelChoiceField(
-        "Setor",
+        label="Setor",
         queryset=Department.objects.all(),
         widget=forms.Select(attrs={"placeholder": "Selecione o setor"})
     )
     branch = forms.ModelChoiceField(
-        "Filial",
+        label="Filial",
         queryset=Branch.objects.all(),
         widget=forms.Select(attrs={"placeholder": "Selecione a filial"})
     )
