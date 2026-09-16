@@ -5,13 +5,12 @@ from django.db import transaction
 from django.urls import reverse_lazy
 from django.views.generic import FormView
 
-from core.views import AppFormPageView
 from accounts.forms import RegistrationForm
 from organization.models import Employee
 
 User = get_user_model()
 
-class RegisterView(AppFormPageView):
+class RegisterView(FormView):
     """
     View para o cadastro de novos usuários e colaboradores.
     Implementa a criação atômica de User e Employee.
@@ -22,7 +21,19 @@ class RegisterView(AppFormPageView):
     page_description = "Crie sua conta de acesso ao sistema vinculando-a ao seu registro de colaborador."
     submit_label = "Cadastrar Conta"
     cancel_url_name = "accounts:login"
-    success_url = reverse_lazy("login")
+    success_url = reverse_lazy("accounts:login")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "page_title": self.page_title,
+                "page_description": self.page_description,
+                "submit_label": self.submit_label,
+                "cancel_url_name": self.cancel_url_name,
+            }
+        )
+        return context
 
     def form_valid(self, form):
         """
