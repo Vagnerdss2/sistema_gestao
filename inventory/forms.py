@@ -9,8 +9,7 @@ class InventoryItemForm(StyledModelForm):
     """
     Formulário para cadastro completo de um novo item no catálogo de inventário ou edição de item.
     
-    Permite especificar metadados detalhados (marca, modelo, serial, patrimônio,
-    data de aquisição, valor unitário em R$, filial e estoque mínimo).
+    Permite especificar metadados detalhados (marca, modelo, serial, data de aquisição, valor unitário em R$, filial).
     """
     class Meta:
         model = InventoryItem
@@ -20,12 +19,10 @@ class InventoryItemForm(StyledModelForm):
             "brand",
             "model",
             "serial_number",
-            "asset_tag",
             "acquisition_date",
             "unit_price",
             "status",
             "quantity",
-            "minimum_quantity",
             "branch",
             "assigned_employee",
             "notes",
@@ -36,12 +33,10 @@ class InventoryItemForm(StyledModelForm):
             "brand": "Marca",
             "model": "Modelo",
             "serial_number": "Número de Série",
-            "asset_tag": "Número de Patrimônio",
             "acquisition_date": "Data de Aquisição",
             "unit_price": "Valor Unitário do Item (R$)",
             "status": "Status",
             "quantity": "Quantidade em Estoque",
-            "minimum_quantity": "Quantidade Mínima de Alerta",
             "branch": "Filial",
             "assigned_employee": "Colaborador Vinculado (se já em uso)",
             "notes": "Observações / Especificações Técnicas",

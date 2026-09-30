@@ -54,7 +54,6 @@ class InventoryItem(TimeStampedModel):
     model = models.CharField("modelo", max_length=120, blank=True)
     brand = models.CharField("marca", max_length=120, blank=True)
     serial_number = models.CharField("número de série", max_length=120, blank=True)
-    asset_tag = models.CharField("patrimônio", max_length=120, blank=True)
     # Data em que o equipamento ou lote foi adquirido
     acquisition_date = models.DateField("data de aquisição", null=True, blank=True)
     # Valor unitário do item em Reais (R$)
@@ -72,7 +71,6 @@ class InventoryItem(TimeStampedModel):
         default=InventoryStatus.IN_STOCK,
     )
     quantity = models.PositiveIntegerField("quantidade em estoque", default=0)
-    minimum_quantity = models.PositiveIntegerField("quantidade mínima", default=0)
     branch = models.ForeignKey(
         "organization.Branch",
         on_delete=models.PROTECT,
@@ -119,7 +117,7 @@ class InventoryItem(TimeStampedModel):
     @property
     def is_below_minimum(self) -> bool:
         """Indica se a quantidade atual atingiu ou está abaixo do limite de segurança configurado."""
-        return self.quantity <= self.minimum_quantity
+        return False
 
     @property
     def total_value(self) -> Decimal:
