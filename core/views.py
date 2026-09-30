@@ -56,6 +56,34 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             ),
         )
 
+        # --- Novos dados para Gráficos ---
+
+        # 1. Itens em uso por filial (Gráfico de Pizza)
+        items_in_use_by_branch = (
+            InventoryItem.objects.filter(assigned_employee__isnull=False)
+            .values("branch__name")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+        )
+
+        # 2. Itens em estoque por categoria (Gráfico de Pizza/Rosca)
+        stock_by_category = (
+            InventoryItem.objects.filter(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK)
+            .values("category__name")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+        )
+
+        # 3. Valor total em estoque por filial (Gráfico de Barras)
+        stock_value_by_branch = (
+            InventoryItem.objects.filter(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK)
+            .values("branch__name")
+            .annotate(total_value=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField()))
+            .order_by("-total_value")
+        )
+
+        # --------------------------------
+
         # Resumo de serviços do mês agrupados por Filial e Setor atendidos
         service_summary = (
             ServiceOrder.objects.filter(service_datetime__month=current_month)
@@ -93,6 +121,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .exclude(status=InventoryStatus.DISCARDED)
                 .select_related("category", "branch")
                 .order_by("quantity", "name")[:8],
+                # Dados para os gráficos
+                "items_in_use_by_branch": items_in_use_by_branch,
+                "stock_by_category": stock_by_category,
+                "stock_value_by_branch": stock_value_by_branch,
             }
         )
         return context

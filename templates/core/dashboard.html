@@ -93,9 +93,128 @@
         </article>
     </section>
 
+    <section class="mt-6 grid gap-6 xl:grid-cols-3">
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <h3 class="mb-4 text-lg font-semibold">Itens em Uso por Filial</h3>
+            <div class="h-64">
+                <canvas id="chartItemsInUse"></canvas>
+            </div>
+        </article>
+
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <h3 class="mb-4 text-lg font-semibold">Estoque por Categoria</h3>
+            <div class="h-64">
+                <canvas id="chartStockByCategory"></canvas>
+            </div>
+        </article>
+
+        <article class="rounded-2xl bg-white p-6 shadow-sm">
+            <h3 class="mb-4 text-lg font-semibold">Valor em Estoque por Filial</h3>
+            <div class="h-64">
+                <canvas id="chartStockValueByBranch"></canvas>
+            </div>
+        </article>
+    </section>
+
     <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <div class="mb-4 flex items-center justify-between">
             <h3 class="text-lg font-semibold">Ultimos Servicos</h3>
+            <a href="{% url 'supportdesk:service-create' %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Novo servico</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-slate-200 text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Titulo</th>
+                        <th class="px-4 py-3">Usuario</th>
+                        <th class="px-4 py-3">Setor</th>
+                        <th class="px-4 py-3">Tecnico</th>
+                        <th class="px-4 py-3">Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in recent_service_orders %}
+                        <tr class="border-b border-slate-100">
+                            <td class="px-4 py-3">{{ service.title }}</td>
+                            <td class="px-4 py-3">{{ service.attended_user }}</td>
+                            <td class="px-4 py-3">{{ service.department }}</td>
+                            <td class="px-4 py-3">{{ service.technician }}</td>
+                            <td class="px-4 py-3">{{ service.service_datetime|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-6 text-center text-slate-500">Nenhum atendimento registrado.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Itens em uso por filial (Pie Chart)
+            const ctxInUse = document.getElementById('chartItemsInUse').getContext('2d');
+            new Chart(ctxInUse, {
+                type: 'pie',
+                data: {
+                    labels: [{% for item in items_in_use_by_branch %}"{{ item.branch__name }}",{% endfor %}],
+                    datasets: [{
+                        data: [{% for item in items_in_use_by_branch %}{{ item.total }},{% endfor %}],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // 2. Itens em estoque por categoria (Doughnut Chart)
+            const ctxCategory = document.getElementById('chartStockByCategory').getContext('2d');
+            new Chart(ctxCategory, {
+                type: 'doughnut',
+                data: {
+                    labels: [{% for item in stock_by_category %}"{{ item.category__name }}",{% endfor %}],
+                    datasets: [{
+                        data: [{% for item in stock_by_category %}{{ item.total }},{% endfor %}],
+                        backgroundColor: ['#0ea5e9', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // 3. Valor total em estoque por filial (Bar Chart)
+            const ctxValue = document.getElementById('chartStockValueByBranch').getContext('2d');
+            new Chart(ctxValue, {
+                type: 'bar',
+                data: {
+                    labels: [{% for item in stock_value_by_branch %}"{{ item.branch__name }}",{% endfor %}],
+                    datasets: [{
+                        label: 'Valor (R$)',
+                        data: [{% for item in stock_value_by_branch %}{{ item.total_value|unfiltered_currency }},{% endfor %}],
+                        backgroundColor: '#3b82f6',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+    </script>
+{% endblock %}
+text-lg font-semibold">Ultimos Servicos</h3>
             <a href="{% url 'supportdesk:service-create' %}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">Novo servico</a>
         </div>
         <div class="overflow-x-auto">
