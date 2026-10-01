@@ -143,3 +143,77 @@ LOGOUT_REDIRECT_URL = 'accounts:login'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Logging (producao com DEBUG=False: erros 500 vao para logs/django_error.log
+# com traceback completo, em vez de sumirem na resposta generica)
+# https://docs.djangoproject.com/en/5.2/topics/logging/
+
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {name} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'django_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB por arquivo
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'django_error.log',
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB por arquivo
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        # Logs gerais do Django (requests, templates, etc.)
+        'django': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Erros 500 e excecoes nao tratadas: traceback completo no error log.
+        # O Django registra automaticamente nesse logger via except handling.
+        'django.request': {
+            'handlers': ['console', 'error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Queries lentas / avisos de banco vao para o arquivo geral
+        'django.db.backends': {
+            'handlers': ['django_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}

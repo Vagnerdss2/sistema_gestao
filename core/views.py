@@ -52,7 +52,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             stock_value=Sum(
                 F("quantity") * F("unit_price"),
                 filter=Q(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK),
-                output_field=models.DecimalField(),
+                output_field=models.DecimalField(max_digits=14, decimal_places=2),
             ),
         )
 
@@ -78,7 +78,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         stock_value_by_branch = (
             InventoryItem.objects.filter(assigned_employee__isnull=True, status=InventoryStatus.IN_STOCK)
             .values("branch__name")
-            .annotate(total_value=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField()))
+            .annotate(total_value=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField(max_digits=14, decimal_places=2)))
             .order_by("-total_value")
         )
 

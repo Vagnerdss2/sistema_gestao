@@ -119,7 +119,7 @@ class InventoryItem(TimeStampedModel):
     @property
     def is_below_minimum(self) -> bool:
         """Indica se a quantidade atual atingiu ou está abaixo do limite de segurança configurado."""
-        return False
+        return self.quantity <= self.minimum_quantity
 
     @property
     def total_value(self) -> Decimal:

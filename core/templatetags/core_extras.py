@@ -65,3 +65,33 @@ def multiply(value, arg):
     except Exception:
         return Decimal("0.00")
 
+
+@register.filter
+def unfiltered_currency(value):
+    """
+    Filtro de template para uso dentro de JavaScript (Chart.js).
+
+    Diferente do 'currency', retorna apenas o número com ponto decimal
+    (ex: 1234.57), sem símbolo "R$" e sem separador de milhar, para não
+    quebrar a sintaxe do array JS: data: [1234.57, ...].
+
+    Uso no template: {{ item.total_value|unfiltered_currency }}
+    """
+    if value is None or value == "":
+        return "0"
+    try:
+        if isinstance(value, str):
+            # Limpa caracteres não numéricos caso receba string formatada
+            clean_str = value.replace("R$", "").replace(" ", "").replace(".", "").replace(",", ".")
+            val = Decimal(clean_str)
+        elif isinstance(value, (int, float)):
+            val = Decimal(str(value))
+        elif isinstance(value, Decimal):
+            val = value
+        else:
+            val = Decimal(str(value))
+
+        return f"{val:.2f}"
+    except Exception:
+        return "0"
+

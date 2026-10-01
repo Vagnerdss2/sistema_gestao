@@ -6,4 +6,5 @@ media/
 staticfiles/
 .env
 instruções.md
+logs/*.log
 
