@@ -7,7 +7,7 @@
 
 {% block content %}
     <!-- Summary Metrics -->
-    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-sky-500">
             <span class="text-xs font-semibold uppercase tracking-wider text-sky-700">Itens Cadastrados</span>
             <div class="mt-2 flex items-baseline justify-between">
@@ -32,13 +32,6 @@
             </div>
         </div>
 
-        <div class="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 flex flex-col justify-between border-l-4 border-l-rose-500">
-            <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Estoque Baixo</span>
-            <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-2xl font-black text-rose-600">{{ low_stock_count }}</span>
-                <span class="text-xs font-medium text-rose-600/80">críticos</span>
-            </div>
-        </div>
     </div>
 
     <!-- Action Header -->
@@ -121,11 +114,7 @@
                     <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 transition">
                         Aplicar Filtros
                     </button>
-                    <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input type="checkbox" name="low_stock" value="1" {% if selected_low_stock == '1' %}checked{% endif %} onchange="this.form.submit()" class="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">
-                        <span class="text-rose-700 font-semibold">Apenas Estoque Baixo</span>
-                    </label>
-                    {% if q or selected_status or selected_branch or selected_category or selected_low_stock %}
+                    {% if q or selected_status or selected_branch or selected_category %}
                         <a href="{% url 'inventory:item-list' %}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
                             Limpar Filtros
                         </a>
@@ -155,18 +144,13 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     {% for object in objects %}
-                        <tr class="hover:bg-slate-50/80 transition {% if object.is_below_minimum %}bg-amber-50/30{% endif %}">
+                        <tr class="hover:bg-slate-50/80 transition">
                             <td class="px-5 py-4">
                                 <div class="flex flex-col">
                                     <div class="flex items-center gap-2">
                                         <a href="{% url 'inventory:item-detail' object.pk %}" class="font-bold text-slate-900 hover:text-sky-600 transition">
                                             {{ object.name }}
                                         </a>
-                                        {% if object.is_below_minimum %}
-                                            <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20" title="Estoque abaixo ou no limite mínimo">
-                                                Baixo
-                                            </span>
-                                        {% endif %}
                                     </div>
                                     <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
                                         <span class="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{{ object.category.name }}</span>
@@ -203,13 +187,9 @@
                             <td class="px-4 py-4 text-center whitespace-nowrap">
                                 <span class="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-sm font-black
                                     {% if object.quantity == 0 %}bg-rose-100 text-rose-800 border border-rose-200
-                                    {% elif object.is_below_minimum %}bg-amber-100 text-amber-900 border border-amber-300
                                     {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
                                     {{ object.quantity }} un.
                                 </span>
-                                {% if object.minimum_quantity > 0 %}
-                                    <span class="block text-[10px] text-slate-400 mt-0.5">mín: {{ object.minimum_quantity }}</span>
-                                {% endif %}
                             </td>
 
                             <td class="px-4 py-4 text-xs font-bold text-slate-900 text-right whitespace-nowrap">

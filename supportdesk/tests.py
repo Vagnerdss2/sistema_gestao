@@ -34,7 +34,6 @@ class ServiceOrderTests(TestCase):
             category=self.category,
             branch=self.branch,
             quantity=10,
-            minimum_quantity=2,
         )
 
     def test_service_usage_consumes_stock(self):

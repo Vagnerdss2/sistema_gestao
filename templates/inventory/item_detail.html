@@ -58,7 +58,6 @@
                 <div class="rounded-xl border border-indigo-200 p-4 bg-indigo-50/40"><dt class="text-xs font-semibold uppercase text-indigo-800">Valor Total do Lote/Item</dt><dd class="mt-1 font-black text-indigo-900">{{ object.total_value|currency }}</dd></div>
 
                 <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Quantidade</dt><dd class="mt-1 font-black text-emerald-700 text-lg">{{ object.quantity }} un.</dd></div>
-                <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Mínimo de Alerta</dt><dd class="mt-1 font-bold text-slate-800">{{ object.minimum_quantity }} un.</dd></div>
                 <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50"><dt class="text-xs font-semibold uppercase text-slate-500">Colaborador Vinculado</dt><dd class="mt-1 font-bold text-amber-800">{{ object.assigned_employee|default:"Disponível em Estoque" }}</dd></div>
             </dl>
         </article>

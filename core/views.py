@@ -46,8 +46,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             total_in_stock=Sum("quantity", filter=Q(status=InventoryStatus.IN_STOCK, assigned_employee__isnull=True)),
             # Total de unidades de equipamentos atualmente em uso por colaboradores
             total_in_use=Sum("quantity", filter=Q(assigned_employee__isnull=False) | Q(status=InventoryStatus.IN_USE)),
-            # Quantidade de itens que atingiram ou estão abaixo do estoque mínimo configurado
-            low_stock=Count("id", filter=Q(assigned_employee__isnull=True, quantity__lte=models.F("minimum_quantity"))),
             # Valor financeiro monetário total do estoque disponível (quantidade * preço unitário)
             stock_value=Sum(
                 F("quantity") * F("unit_price"),
@@ -113,14 +111,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     "attended_user", "branch", "department", "technician"
                 )[:5],
                 "service_summary": service_summary,
-                # Itens de estoque que necessitam de reposição imediata
-                "low_stock_items": InventoryItem.objects.filter(
-                    assigned_employee__isnull=True,
-                    quantity__lte=models.F("minimum_quantity"),
-                )
-                .exclude(status=InventoryStatus.DISCARDED)
-                .select_related("category", "branch")
-                .order_by("quantity", "name")[:8],
                 # Dados para os gráficos
                 "items_in_use_by_branch": items_in_use_by_branch,
                 "stock_by_category": stock_by_category,

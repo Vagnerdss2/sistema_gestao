@@ -72,7 +72,6 @@ class InventoryItem(TimeStampedModel):
         default=InventoryStatus.IN_STOCK,
     )
     quantity = models.PositiveIntegerField("quantidade em estoque", default=0)
-    minimum_quantity = models.PositiveIntegerField("quantidade mínima", default=0)
     branch = models.ForeignKey(
         "organization.Branch",
         on_delete=models.PROTECT,
@@ -115,11 +114,6 @@ class InventoryItem(TimeStampedModel):
             raise ValidationError(
                 {"assigned_employee": "O colaborador precisa pertencer a mesma filial do item."}
             )
-
-    @property
-    def is_below_minimum(self) -> bool:
-        """Indica se a quantidade atual atingiu ou está abaixo do limite de segurança configurado."""
-        return self.quantity <= self.minimum_quantity
 
     @property
     def total_value(self) -> Decimal:

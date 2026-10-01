@@ -5,7 +5,7 @@ from inventory.models import InventoryItem, StockMovement
 
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "branch", "status", "quantity", "minimum_quantity")
+    list_display = ("name", "category", "branch", "status", "quantity")
     list_filter = ("status", "branch", "category")
     search_fields = ("name", "serial_number", "asset_tag", "model", "brand")
 

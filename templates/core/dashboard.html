@@ -6,7 +6,7 @@
 {% block page_description %}Visão geral de estoque, inventário de colaboradores, serviços e tarefas pendentes.{% endblock %}
 
 {% block content %}
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
             <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Itens em Estoque</p>
             <div class="mt-2 flex items-baseline justify-between">
@@ -22,14 +22,6 @@
                 <span class="text-xs font-medium text-amber-700">com colaboradores</span>
             </div>
             <a href="{% url 'inventory:inventory-list' %}" class="mt-1 text-xs text-sky-700 hover:underline block font-medium">Ver inventário &rarr;</a>
-        </article>
-        <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
-            <p class="text-xs font-semibold uppercase tracking-wider text-rose-700">Alertas de Estoque Baixo</p>
-            <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-3xl font-black text-rose-600">{{ inventory_totals.low_stock|default:0 }}</span>
-                <span class="text-xs font-medium text-rose-600">itens críticos</span>
-            </div>
-            <a href="{% url 'inventory:item-list' %}?low_stock=1" class="mt-1 text-xs text-rose-600 hover:underline block font-medium">Ver itens críticos &rarr;</a>
         </article>
         <article class="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 border-l-4 border-l-sky-500">
             <p class="text-xs font-semibold uppercase tracking-wider text-sky-700">Serviços no Mês</p>
@@ -49,29 +41,7 @@
         </article>
     </section>
 
-    <section class="mt-6 grid gap-6 xl:grid-cols-2">
-        <article class="rounded-2xl bg-white p-6 shadow-sm">
-            <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-lg font-semibold">Estoque Baixo</h3>
-                <a href="{% url 'inventory:item-list' %}" class="text-sm text-sky-700">Ver inventario</a>
-            </div>
-            <div class="space-y-3">
-                {% for item in low_stock_items %}
-                    <div class="rounded-xl border border-slate-200 p-4">
-                        <div class="flex items-center justify-between">
-                            <p class="font-medium">{{ item.name }}</p>
-                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                                {{ item.quantity }}/{{ item.minimum_quantity }}
-                            </span>
-                        </div>
-                        <p class="mt-1 text-sm text-slate-500">{{ item.category }} | {{ item.branch }}</p>
-                    </div>
-                {% empty %}
-                    <p class="text-sm text-slate-500">Nenhum item abaixo do minimo.</p>
-                {% endfor %}
-            </div>
-        </article>
-
+    <section class="mt-6">
         <article class="rounded-2xl bg-white p-6 shadow-sm">
             <div class="mb-4 flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Servicos do Mes</h3>

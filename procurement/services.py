@@ -25,7 +25,6 @@ def sync_purchase_order_to_inventory(purchase_order: PurchaseOrder) -> None:
                 model=item.model,
                 brand=item.brand,
                 quantity=0,
-                minimum_quantity=0,
                 branch=purchase_order.branch,
             )
             item.inventory_item = inventory_item

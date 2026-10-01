@@ -31,8 +31,8 @@ class InventoryItemListView(AppListView):
     
     Regra:
     - Filtra estritamente itens onde 'assigned_employee__isnull=True' (apenas estoque geral disponível).
-    - Apresenta métricas consolidadas (total de itens cadastrados, unidades físicas, valor total e alertas de estoque baixo).
-    - Fornece filtros por texto (nome/marca/modelo/serial/patrimônio), filial, categoria, status e estoque baixo.
+    - Apresenta métricas consolidadas (total de itens cadastrados, unidades físicas e valor total).
+    - Fornece filtros por texto (nome/marca/modelo/serial/patrimônio), filial, categoria e status.
     """
 
     model = InventoryItem
@@ -56,7 +56,6 @@ class InventoryItemListView(AppListView):
         status_filter = self.request.GET.get("status", "").strip()
         branch_filter = self.request.GET.get("branch", "").strip()
         category_filter = self.request.GET.get("category", "").strip()
-        low_stock_filter = self.request.GET.get("low_stock", "").strip()
 
         if q:
             qs = qs.filter(
@@ -81,9 +80,6 @@ class InventoryItemListView(AppListView):
         if category_filter and category_filter.isdigit():
             qs = qs.filter(category_id=int(category_filter))
 
-        if low_stock_filter == "1":
-            qs = qs.filter(quantity__lte=F("minimum_quantity"))
-
         return qs
 
     def get_context_data(self, **kwargs):
@@ -94,14 +90,12 @@ class InventoryItemListView(AppListView):
         total_registered_items = stock_items.count()
         total_physical_units = stock_items.aggregate(total=Sum("quantity"))["total"] or 0
         total_stock_value = stock_items.aggregate(
-            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField())
+            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField(max_digits=14, decimal_places=2))
         )["total"] or Decimal("0.00")
-        low_stock_count = stock_items.filter(quantity__lte=F("minimum_quantity")).count()
 
         context["total_registered_items"] = total_registered_items
         context["total_physical_units"] = total_physical_units
         context["total_stock_value"] = total_stock_value
-        context["low_stock_count"] = low_stock_count
 
         context["branches"] = Branch.objects.order_by("name")
         context["categories"] = EquipmentCategory.objects.order_by("name")
@@ -111,7 +105,6 @@ class InventoryItemListView(AppListView):
         context["selected_status"] = self.request.GET.get("status", "").strip()
         context["selected_branch"] = self.request.GET.get("branch", "").strip()
         context["selected_category"] = self.request.GET.get("category", "").strip()
-        context["selected_low_stock"] = self.request.GET.get("low_stock", "").strip()
         return context
 
 
@@ -192,7 +185,7 @@ class CollaboratorInventoryListView(AppListView):
         total_assigned_items = assigned_items.count()
         total_assigned_units = assigned_items.aggregate(total=Sum("quantity"))["total"] or 0
         total_assigned_value = assigned_items.aggregate(
-            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField())
+            total=Sum(F("quantity") * F("unit_price"), output_field=models.DecimalField(max_digits=14, decimal_places=2))
         )["total"] or Decimal("0.00")
         total_collaborators = assigned_items.values("assigned_employee_id").distinct().count()
 
@@ -378,7 +371,6 @@ class QuickAssignView(AppFormPageView, FormView):
                         unit_price=source_item.unit_price,
                         status=InventoryStatus.IN_USE,
                         quantity=quantity,
-                        minimum_quantity=0,
                         branch=employee.branch,
                         assigned_employee=employee,
                         notes=notes or f"Vinculado ao colaborador em {timezone.localdate().strftime('%d/%m/%Y')}",
@@ -607,7 +599,6 @@ class InventoryItemAssignView(AppFormPageView, FormView):
                         unit_price=source_item.unit_price,
                         status=InventoryStatus.IN_USE,
                         quantity=quantity,
-                        minimum_quantity=0,
                         branch=employee.branch,
                         assigned_employee=employee,
                         notes=notes or f"Vinculado ao colaborador em {timezone.localdate().strftime('%d/%m/%Y')}",
@@ -697,7 +688,6 @@ class InventoryItemReturnStockView(AppFormPageView, FormView):
                     status=InventoryStatus.IN_STOCK,
                     defaults={
                         "quantity": 0,
-                        "minimum_quantity": 0,
                         "unit_price": assigned_item.unit_price,
                         "acquisition_date": assigned_item.acquisition_date,
                         "notes": "Estoque geral unificado",

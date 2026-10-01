@@ -44,7 +44,6 @@ class InventoryFeatureTests(TestCase):
             acquisition_date=date(2026, 1, 15),
             unit_price=Decimal("450.00"),
             quantity=10,
-            minimum_quantity=2,
             branch=self.branch,
         )
 
@@ -58,7 +57,6 @@ class InventoryFeatureTests(TestCase):
             "acquisition_date": "2026-03-10",
             "unit_price": "650.00",
             "quantity": 5,
-            "minimum_quantity": 1,
             "branch": self.branch.pk,
             "status": InventoryStatus.IN_STOCK,
         }
